@@ -1,0 +1,18 @@
+/* The crowd add-on: names over the nearest few diggers (and what a lobby is doing to them), and a CHEER button for thumbs. */
+#names { inset: 0; overflow: hidden; }
+#names div { position: absolute; left: 0; top: 0; text-align: center; white-space: nowrap; text-shadow: none; will-change: transform; }
+#names b { display: inline-block; padding: 2px 5px 1px; font-size: 11px; font-weight: 400; line-height: 1; background: #14110dcc; color: #fff; }
+#names i { display: block; width: max-content; margin: 0 auto 2px; padding: 2px 5px 1px; font-style: normal; font-size: 10px; font-weight: 700; line-height: 1; color: #fff; border: 2px solid var(--ink); animation: namefx .2s steps(3); }
+#names i:empty { display: none; }
+@keyframes namefx { from { transform: scale(2.2); opacity: 0; } }
+
+/* touch screens only (E does it on a keyboard): in the gap between the thumb stick and the minimap */
+#hud > #cheerbtn { display: none; }
+body.touch #hud > #cheerbtn { display: block; pointer-events: auto; touch-action: none; text-shadow: none; padding: 6px 7px; font-size: 11px; opacity: .9;
+  right: calc(120px + env(safe-area-inset-right)); bottom: calc(152px + env(safe-area-inset-bottom)); }
+/* a tablet held upright keeps the guide's chip there: one row up, beside CALL YOUR REPS */
+@media (min-width: 701px) and (max-width: 1000px) and (orientation: portrait) { body.touch #hud > #cheerbtn { right: calc(124px + env(safe-area-inset-right)); bottom: calc(270px + env(safe-area-inset-bottom)); } }
+/* lying down, the minimap sits beside DIG and the guide's chip beside that: the button rides on top of the map */
+@media (max-height: 500px) and (orientation: landscape) { body.touch #hud > #cheerbtn { right: calc(142px + env(safe-area-inset-right)); bottom: calc(114px + env(safe-area-inset-bottom)); } }
+@media (max-width: 700px) { #names b { font-size: 10px; } #names i { font-size: 9px; } }
+@media (prefers-reduced-motion: reduce) { #names i { animation: none; } }

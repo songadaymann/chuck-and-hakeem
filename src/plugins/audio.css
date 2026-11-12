@@ -1,0 +1,36 @@
+/* SOUND: the same small tab as MENU, tucked under it beside the two faces. It opens the placard at the end of this
+   file (music and sounds, each with its own switch); struck through when both are off. */
+#hud > #sndbtn { pointer-events: auto; touch-action: none; text-shadow: none; top: calc(max(12px, env(safe-area-inset-top)) + 28px); left: calc(max(14px, env(safe-area-inset-left)) + 286px); font-size: 11px; padding: 3px 7px; box-shadow: 2px 2px 0 var(--ink); opacity: .85; }
+#sndbtn.off { background: var(--card); text-decoration: line-through; opacity: .6; }
+@media (max-width: 700px), (max-height: 500px) { #hud > #sndbtn { left: calc(max(14px, env(safe-area-inset-left)) + 206px); } }
+/* an upright phone: the list of nests comes down that side of the screen, so the tab moves to the stack by the map
+   (over CHEER, in the gap between the thumb stick and the map; with a mouse, on top of the stack) */
+@media (max-width: 700px) and (orientation: portrait) {
+  #hud > #sndbtn { top: auto; left: auto; right: max(14px, env(safe-area-inset-right)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 162px); }
+  body.touch #hud > #sndbtn { right: calc(120px + env(safe-area-inset-right)); bottom: calc(194px + env(safe-area-inset-bottom)); }
+}
+/* under mann.cool's shell (see the end of style.css): one row down with MENU, or, on a phone on its side, beside its left button */
+@media (min-height: 501px) and (min-width: 701px), (min-height: 501px) and (orientation: landscape) { html:has(> mann-cool-game-shell) #hud > #sndbtn { top: calc(max(12px, env(safe-area-inset-top)) + 84px); } }
+@media (max-height: 500px) and (orientation: landscape) { html:has(> mann-cool-game-shell) #hud > #sndbtn { left: var(--mc-home, calc(max(12px, env(safe-area-inset-left)) + 214px)); } }
+/* ---- the placard the tab opens: cardboard, two switches and whose song it is. audio.js sets left and top (under the
+   tab, or over it, or beside it: wherever it is whole and clear of mann.cool's buttons) and reads the safe-area insets
+   back from scroll-margin, which does nothing else here. */
+#hud > #sndcard { pointer-events: auto; touch-action: none; text-shadow: none; z-index: 3; box-sizing: border-box; width: 196px; padding: 9px 8px 7px; background: var(--card); color: var(--ink); border: 3px solid var(--ink); box-shadow: 4px 4px 0 #000; font: 700 13px/1.2 var(--px);
+  scroll-margin: env(safe-area-inset-top, 0px) env(safe-area-inset-right, 0px) env(safe-area-inset-bottom, 0px) env(safe-area-inset-left, 0px); }
+#sndcard::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 6px; background: var(--stripes); border-bottom: 3px solid var(--ink); }
+#sndbtn[aria-expanded="true"] { opacity: 1; }
+/* a whole row is the switch: 44 px tall for a thumb */
+#sndcard button { display: flex; align-items: center; gap: 8px; width: 100%; min-height: 44px; margin: 0; padding: 0 4px; background: none; border: 0; box-shadow: none; font: inherit; color: inherit; text-align: left; touch-action: none; }
+#sndcard button + button { border-top: 3px solid var(--ink); }
+#sndcard button:active { transform: none; box-shadow: none; }
+#sndcard button:focus-visible { outline: 3px solid var(--ink); outline-offset: -3px; }
+#sndcard button span { flex: 1; }
+#sndcard button::after { content: "off"; order: 1; opacity: .55; }
+#sndcard button i { order: 2; flex: none; position: relative; box-sizing: border-box; width: 42px; height: 22px; border: 3px solid var(--ink); background: #14110d40; }
+#sndcard button i::before { content: ""; position: absolute; top: 0; bottom: 0; left: 0; width: 16px; background: var(--ink); }
+#sndcard button[aria-checked="true"]::after { content: "on"; opacity: 1; }
+#sndcard button[aria-checked="true"] i { background: var(--yellow); }
+#sndcard button[aria-checked="true"] i::before { left: auto; right: 0; }
+#sndcard button[aria-checked="false"] span { opacity: .55; text-decoration: line-through; }
+#sndcard small { display: block; padding: 6px 4px 0; border-top: 3px solid var(--ink); font: 400 10px/1.3 var(--px); text-transform: uppercase; }
+#sndcard small b { display: block; font-weight: 700; }

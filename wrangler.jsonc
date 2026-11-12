@@ -1,0 +1,35 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "dig-them-out",
+  "main": "worker/index.js",
+  "compatibility_date": "2026-10-01",
+  "account_id": "a79a1faef6e8f94566f3320429d54006",
+  // Static files at the root are served for free without running the Worker; only /ws and /api/* reach our code.
+  // Everything under /leave (the game's address on mann.cool) does run it: the Worker takes the prefix off and fetches the file itself.
+  // /platform/config.json is asked for by mann.cool's shell; on a preview the Worker fetches it from mann.cool (as it does /api/v1/*).
+  // /audio/* (the song) runs it too: the asset store has no "Range" answers, which Safari needs to play audio, so the Worker cuts the piece asked for.
+  "assets": { "directory": "./dist", "binding": "ASSETS", "run_worker_first": ["/ws", "/api/*", "/platform/config.json", "/audio/*", "/leave", "/leave/*"] },
+  // mann.cool/leave: routes take effect on the next deploy (the zone is on this same account). The
+  // workers.dev address would be switched off by default once routes exist, so it is kept on by name.
+  // The www pair only sends people on to mann.cool/leave (the Worker answers them with a redirect).
+  "workers_dev": true,
+  "routes": [
+    { "pattern": "mann.cool/leave", "zone_name": "mann.cool" },
+    { "pattern": "mann.cool/leave/*", "zone_name": "mann.cool" },
+    { "pattern": "www.mann.cool/leave", "zone_name": "mann.cool" },
+    { "pattern": "www.mann.cool/leave/*", "zone_name": "mann.cool" }
+  ],
+  "durable_objects": {
+    "bindings": [
+      { "name": "WORLD", "class_name": "World" },
+      { "name": "ROOM", "class_name": "Room" },
+      { "name": "PLAYERS", "class_name": "Players" }
+    ],
+    // A room with anyone in it never sleeps, so waiting for it to (the default: up to five minutes of old rooms
+    // talking to a new Worker) buys nothing. A deploy is one clean blip: everyone reconnects within a few seconds.
+    "code_update_strategy": { "mode": "immediate" }
+  },
+  "migrations": [{ "tag": "v1", "new_sqlite_classes": ["World", "Room", "Players"] }],
+  // Keep our own log lines and errors, but not one log event per message: at this message volume that would cost far more than the game.
+  "observability": { "enabled": true, "logs": { "enabled": true, "invocation_logs": false } }
+}

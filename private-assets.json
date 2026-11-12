@@ -1,0 +1,32 @@
+{
+  "schema": 1,
+  "tool": "1.3.0",
+  "project": "songadaymann/chuck-and-hakeem",
+  "mode": "overlay",
+  "build": {"publicDir": "public", "out": "dist"},
+  "packs": {
+    "meshy-busts": {
+      "section": 4,
+      "title": "Chuck Schumer and Hakeem Jeffries busts (Meshy)",
+      "author": "Jonathan Mann, made in Meshy",
+      "why": "Likenesses of two real people, made in Meshy; the Meshy plan's terms for these heads are not confirmed",
+      "decision": "hold",
+      "decidedBy": "agent",
+      "reviewBy": "2026-12-15"
+    },
+    "og-image": {
+      "section": 4,
+      "title": "Link preview image showing both heads",
+      "author": "Jonathan Mann",
+      "why": "Shows the two real people's likenesses (the Meshy heads)",
+      "decision": "hold",
+      "decidedBy": "agent",
+      "reviewBy": "2026-12-15"
+    }
+  },
+  "files": {
+    "public/models/world/chuck.glb": {"pack":"meshy-busts","sha256":"c0abf9495827c8f09adc0ea328c5ff08ec8c24d06db99a185d8c901e8ea83c85","blob":"eab6f4dbb0bba58033f3c0b0cb896c074d86de48","bytes":156492},
+    "public/models/world/hakeem.glb": {"pack":"meshy-busts","sha256":"61104bd7ba954784e3999449f6f11b3a5c936f83772519d054806e43a720e725","blob":"2e3584e97bcdf58dd50b34891e370aa6d8cf757c","bytes":160816},
+    "public/og.jpg": {"pack":"og-image","sha256":"646979ac34af1a84d2f4f9a1640c65170a9507f8da220da55bfc224390781184","blob":"fd8d5e6c5ecaecd253337defdbd41793beb66a00","bytes":171956,"w":1200,"h":630}
+  }
+}

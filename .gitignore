@@ -1,0 +1,65 @@
+node_modules/
+dist/
+assets-src/
+.wrangler/
+.DS_Store
+.dev.vars
+shots/
+
+# Secrets
+.env
+.env.*
+!.env.example
+.dev.vars.*
+*.pem
+*.p8
+*.key
+secrets/
+.secrets/
+*oauth*token*.json
+service-account*.json
+
+# Private material (see ASSETS.md "Not included")
+private-assets/
+/public/asset-stamp.json
+data/
+logs/
+
+# Generated
+build/
+out/
+output/
+test-results/
+playwright-report/
+.vercel/
+.next/
+.turbo/
+cache/
+coverage/
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+*.tsbuildinfo
+
+# Machine
+*.log
+
+# This project
+/assets-src/
+/shots/
+/previews/
+/.mann-cool-assets/
+/.claude/
+tools/cover/out/
+tools/cover/parts/
+# public/data holds the game's reps phone book (public data), not private data
+!/public/data/
+
+# >>> assets.mjs: generated from private-assets.json by `node scripts/assets.mjs docs`; do not edit by hand >>>
+/public/asset-stamp.json
+/private-assets/
+/public/models/world/chuck.glb
+/public/models/world/hakeem.glb
+/public/og.jpg
+# <<< assets.mjs <<<

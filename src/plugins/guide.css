@@ -1,0 +1,42 @@
+/* The guide: one yellow chip that says what to do next, and arrows at the edge of the screen for what is out of sight. */
+/* #guidechip is the slot the chip may use (bottom centre, between your tool and the map); the card inside is what you see */
+#hud > #guidechip { left: 306px; right: 306px; bottom: max(12px, env(safe-area-inset-bottom)); display: flex; justify-content: center; text-shadow: none; }
+#guidechip > div { position: relative; box-sizing: border-box; max-width: 440px; padding: 5px 10px 5px 19px; background: var(--yellow); color: var(--ink); border: 3px solid var(--ink); box-shadow: 3px 3px 0 #000; text-align: center; font-size: 14px; line-height: 1.15; transform: rotate(-0.6deg); }
+/* the strip down its left side: hazard stripes, or the colour of the lobby the line is about */
+#guidechip > div::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 8px; background: var(--c, var(--stripes)); border-right: 3px solid var(--ink); }
+#guidechip b { display: block; }
+#guidechip small { display: block; margin-top: 2px; font-size: 11px; }
+#guidechip small:empty { display: none; }
+#guidechip.in > div { animation: guidein .25s steps(4); }
+@keyframes guidein { from { transform: translateY(12px) rotate(-0.6deg); opacity: 0; } }
+
+/* inside the notch and the home bar, so an arrow is never under either */
+#hud > #guidearrows { inset: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left); overflow: hidden; text-shadow: none; }
+.garrow { position: absolute; left: -26px; top: -26px; width: 52px; height: 52px; display: flex; flex-direction: column; align-items: center; justify-content: center; will-change: transform; --c: var(--yellow); }
+.garrow.dn { flex-direction: column-reverse; }
+.garrow svg { width: 24px; height: 24px; overflow: visible; filter: drop-shadow(2px 2px 0 #000); }
+.garrow path { fill: var(--c); stroke: var(--ink); stroke-width: 2.5; }
+.garrow span { margin: 3px 0; padding: 1px 4px; font: 700 10px/1.15 var(--px); white-space: pre; text-align: center; color: #fff; background: var(--c); border: 2px solid var(--ink); text-shadow: 1px 1px 0 #000; }
+.garrow.dirt span { color: var(--ink); text-shadow: none; }
+
+/* a phone lying down: the bottom is thumbs, the map and CHEER, so it goes up top between the buttons and the lobby list, under the status line */
+@media (max-height: 500px) and (orientation: landscape) {
+  #hud > #guidechip { left: calc(max(14px, env(safe-area-inset-left)) + 284px); right: calc(max(14px, env(safe-area-inset-right)) + 138px); top: var(--gt, max(10px, env(safe-area-inset-top))); bottom: auto; }
+  #guidechip > div { font-size: 12px; padding: 4px 8px 4px 17px; }
+  #guidechip small { font-size: 10px; }
+}
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 780px) { #guidechip small { display: none; } }   /* a small one: room for the headline only */
+/* a phone held upright: the bottom belongs to the thumbs, so it sits on top of the status line, under the two faces */
+@media (max-width: 700px) and (orientation: portrait) {
+  #hud > #guidechip { left: 8px; right: 8px; bottom: var(--gb, 60vh); }
+  #guidechip > div { font-size: 12px; padding: 3px 8px 3px 16px; border-width: 2px; box-shadow: 2px 2px 0 #000; transform: none; }
+  #guidechip > div::before { border-right-width: 2px; }
+  #guidechip small { font-size: 10px; margin-top: 1px; }
+}
+/* a tablet held upright: above the thumb stick */
+@media (min-width: 701px) and (max-width: 1000px) and (orientation: portrait) { #hud > #guidechip { left: 200px; right: 200px; bottom: calc(160px + env(safe-area-inset-bottom)); } }
+@media (prefers-reduced-motion: reduce) { #guidechip.in > div { animation: none; } }
+/* under mann.cool's shell (see the end of style.css), lying down: between MENU / SOUND, which sit beside its left button, and its right buttons */
+@media (max-height: 500px) and (orientation: landscape) { html:has(> mann-cool-game-shell) #hud > #guidechip { left: calc(var(--mc-home, calc(max(12px, env(safe-area-inset-left)) + 214px)) + 64px); right: calc(max(10px, env(safe-area-inset-right)) + 140px); } }
+/* under the shell on a short upright phone: the headline only, which buys back part of the row its buttons take */
+@media (max-width: 700px) and (orientation: portrait) and (max-height: 700px) { html:has(> mann-cool-game-shell) #guidechip small { display: none; } }

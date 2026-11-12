@@ -1,0 +1,42 @@
+{
+  "slug": "leave",
+  "title": "Chuck & Hakeem Won't Leave",
+  "leaderboard": true,
+  "leaderboardVariant": "dirt",
+  "leaderboardBoards": [
+    {
+      "variant": "dirt",
+      "label": "Dirt moved",
+      "metric": "dirtM3",
+      "metricLabel": "Cubic metres of dirt moved",
+      "direction": "desc",
+      "display": "integer",
+      "aggregation": "player-best",
+      "minimumMatches": 1
+    }
+  ],
+  "shellTheme": {
+    "paper": "#ead9b0",
+    "ink": "#14110d",
+    "muted": "#6b4a2b",
+    "rule": "#14110d",
+    "accent": "#ffc21a",
+    "panel": "#14110d",
+    "panelInk": "#ead9b0",
+    "panelMuted": "#b9a882",
+    "field": "#3a2a18",
+    "focus": "#e2392f",
+    "font": "ui-monospace, Menlo, monospace",
+    "headingFont": "Rubik Dirt, Impact, sans-serif",
+    "controlRadius": "0px",
+    "panelRadius": "0px"
+  },
+  "leaderboardUrl": "",
+  "assets": "dist",
+  "workerName": "dig-them-out",
+  "routePatterns": [
+    "mann.cool/leave",
+    "mann.cool/leave/*"
+  ],
+  "oversizedAssets": 0
+}

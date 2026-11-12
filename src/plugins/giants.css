@@ -1,0 +1,14 @@
+/* The two men talk. A white bubble like everyone's, but hung under the chin with its tail pointing up at him (the sign
+   over his head has to stay readable), and his name on a tab. giants.js works out where it goes (--gx, --gt, --gy);
+   the HUD keeps writing its own position onto the element, hence the !important. */
+#pops .say.gsay { display: block !important; left: var(--gx, 50%) !important; top: var(--gt, 50%) !important; transform: translate(-50%, 0); z-index: 1; box-sizing: border-box; width: max-content; min-width: 150px; max-width: min(250px, 66vw); padding: 7px 9px 6px; animation: gsayin .2s steps(3); }
+#pops .say.gsay::after { left: 50%; top: -15px; bottom: auto; margin: 0 0 0 -6px; border: 6px solid transparent; border-bottom-color: #000; }
+#pops .say.gsay::before { content: attr(data-who); position: absolute; left: -3px; bottom: calc(100% + 3px); background: #000; color: var(--yellow); font-size: 10px; line-height: 1; padding: 3px 6px 2px; }
+/* He is out of the picture (or behind the HUD): the bubble docks at the top instead. */
+#pops .say.gsay.gdock { left: 50% !important; top: var(--gy, 52px) !important; }
+#pops .say.gsay.gl::after { left: -15px; top: 50%; margin: -6px 0 0; border-color: transparent; border-right-color: #000; }
+#pops .say.gsay.gr::after { left: auto; right: -15px; top: 50%; margin: -6px 0 0; border-color: transparent; border-left-color: #000; }
+#pops .say.gsay.ghush { visibility: hidden; }
+@keyframes gsayin { from { scale: .4; opacity: 0; } }
+@media (max-width: 700px) { #pops .say.gsay { font-size: 12px; padding: 6px 7px 5px; } }
+@media (prefers-reduced-motion: reduce) { #pops .say.gsay { animation: none; } }

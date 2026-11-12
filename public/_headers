@@ -1,0 +1,16 @@
+# Response headers for the static files (Workers Static Assets reads this; it is not served itself).
+# Built files carry a hash of their contents in the name, so a browser may keep them for good.
+# These rules match the address asked for, so they cover the root; under /leave/ the Worker sets the same (worker/index.js).
+/assets/*
+  Cache-Control: public, max-age=31536000, immutable
+
+# Models and data keep their names when they change, so a day at most.
+/models/*
+  Cache-Control: public, max-age=86400
+
+/data/*
+  Cache-Control: public, max-age=86400
+
+# The song (tools/song.sh remakes it under the same name).
+/audio/*
+  Cache-Control: public, max-age=86400

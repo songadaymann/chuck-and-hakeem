@@ -1,0 +1,83 @@
+/* "CALL YOUR REPS": a HUD button that sits on top of the minimap, a line on the start screen, and a placard of phone numbers.
+   Anything with a digit in it is set in the regular pixel weight or the display face: the bold pixel 4 is a blob. */
+#hud > #repsbtn { pointer-events: auto; text-shadow: none; box-sizing: border-box; width: 146px; padding: 5px 2px; font-size: 12px; line-height: 1.15;
+  right: max(14px, env(safe-area-inset-right)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 156px); }
+#repsbtn:not(.seen) { animation: repsnudge 8s steps(1) infinite; }
+@keyframes repsnudge { 0%, 12%, 100% { transform: none; } 3%, 9% { transform: rotate(-4deg); } 6% { transform: rotate(4deg); } }
+#repsbtn i { position: absolute; right: -10px; top: -16px; min-width: 12px; padding: 1px 3px; font-style: normal; font-size: 11px; background: var(--green); color: var(--ink); border: 3px solid var(--ink); }
+#repsbtn i:empty { display: none; }
+/* phones: the map is smaller and rides above DIG; lying down, the map moves beside DIG and the button takes the spot above it.
+   (The narrow rule comes after the short one, as in style.css: a window that is both gets the narrow map.) */
+body.touch #hud > #repsbtn { width: 102px; font-size: 11px; bottom: calc(262px + env(safe-area-inset-bottom)); }
+@media (max-height: 500px) and (orientation: landscape) {
+  #hud > #repsbtn { width: 86px; font-size: 10px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 96px); }
+  body.touch #hud > #repsbtn { width: 108px; font-size: 11px; right: calc(22px + env(safe-area-inset-right)); bottom: calc(148px + env(safe-area-inset-bottom)); }
+}
+@media (max-width: 700px) { #hud > #repsbtn { width: 102px; font-size: 11px; bottom: calc(max(12px, env(safe-area-inset-bottom)) + 112px); } }
+.repsline { font-size: 12px; }
+
+#reps { position: fixed; inset: 0; z-index: 5; display: flex; align-items: center; justify-content: center; background: #000a; }
+#reps .box { width: min(460px, calc(100vw - 16px)); transform: none; padding-bottom: 0; }
+#reps h2 { margin: 2px 40px 6px 0; font: 34px/0.95 var(--big); text-transform: uppercase; color: var(--red); }
+#reps h3 { display: inline-block; margin: 12px 0 6px; padding: 2px 8px; font-size: 13px; text-transform: uppercase; background: var(--ink); color: var(--card); }
+#reps .x { position: absolute; right: 12px; top: 22px; }
+#reps a { color: inherit; }
+.ziprow { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 10px; font-weight: 700; text-transform: uppercase; }
+.ziprow input { width: 5.4em; padding: 4px 2px; font: 400 26px/1 var(--px); letter-spacing: 3px; text-align: center; background: #fffc; user-select: text; -webkit-user-select: text; }
+.ziprow input:focus { outline: 3px solid var(--yellow); outline-offset: 0; }
+.ziprow small { font-weight: 400; font-size: 10px; text-transform: none; opacity: .8; }
+#reps .note { margin: 6px 0; font-size: 12px; overflow-wrap: anywhere; }
+#reps .fine { margin: 6px 0; font-size: 10px; opacity: .85; overflow-wrap: anywhere; }
+
+/* one member: a strip of party colour down the side, the number as the biggest thing on the card */
+.rep { position: relative; margin: 0 0 10px; padding: 8px 8px 10px 21px; background: #fff6; border: 3px solid var(--ink); }
+.rep::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 10px; border-right: 3px solid var(--ink); background: #777; }
+.rep.d::before { background: #2f6fc4; } .rep.r::before { background: var(--red); }
+.rep .who b { display: block; font: 21px/1 var(--big); }
+.rep .who span { display: block; margin-top: 3px; font-size: 11px; text-transform: uppercase; }
+.rep .who em { display: block; font-style: normal; font-size: 11px; color: var(--dirt); text-transform: uppercase; }
+#reps a.call { display: block; margin: 8px 0; padding: 9px 4px; text-align: center; text-decoration: none; white-space: nowrap; font: 27px/1 var(--big); background: var(--green); color: var(--ink); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); }
+#reps a.call:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+.rep .say { display: block; font-size: 10px; text-transform: uppercase; opacity: .8; }
+.rep blockquote { margin: 2px 0 8px; padding: 6px 8px; font-size: 13px; line-height: 1.35; background: #fff9; border-left: 4px solid var(--ink); user-select: text; -webkit-user-select: text; }
+.rep .did.yes { background: var(--green); box-shadow: none; transform: translate(2px, 2px); cursor: default; }
+.rep.done::after { content: "CALLED"; position: absolute; right: 10px; bottom: 9px; padding: 2px 8px; font: 20px/1 var(--big); color: var(--red); border: 4px solid var(--red); background: #fffb; transform: rotate(-9deg); pointer-events: none; }
+.rep.pop::after { animation: repsstamp .3s steps(4); }
+@keyframes repsstamp { from { transform: rotate(-9deg) scale(3); opacity: 0; } }
+#reps .board { margin: 12px 0 6px; font-size: 12px; }
+#reps .board a.call { display: block; width: max-content; margin: 6px 0 0; padding: 6px 10px; font-size: 20px; background: var(--yellow); }
+#reps .foot { position: sticky; bottom: 0; display: flex; align-items: center; justify-content: space-between; margin: 10px -22px 0; padding: 8px 22px 10px; background: var(--card); border-top: 3px solid var(--ink); }
+#reps .tally { margin: 0; text-transform: uppercase; }
+/* the thank-you, in the game's own toast lettering, on top of the placard for a few seconds */
+#reps .cheer { position: fixed; left: 50%; top: 9%; z-index: 6; padding: 8px 14px; white-space: pre; text-align: center; pointer-events: none; font: 24px/1.1 var(--big); color: var(--card); background: var(--ink); border: 3px solid var(--yellow); box-shadow: 4px 4px 0 #000; transform: translateX(-50%) rotate(-1.5deg); animation: repscheer 3.2s steps(16) forwards; }
+@keyframes repscheer { 0% { top: 0; opacity: 0; } 6%, 85% { top: 9%; opacity: 1; } 100% { top: 9%; opacity: 0; } }
+
+@media (max-width: 700px) {
+  /* a phone: the placard hangs from the top edge, so the ZIP field is never under the keyboard */
+  #reps { align-items: flex-start; }
+  #reps .box { width: 100%; max-height: 100vh; max-height: 100dvh; border-width: 0 0 4px; box-shadow: none; padding-left: 14px; padding-right: 14px; }
+  #reps .foot { margin: 10px -14px 0; padding: 8px 14px calc(10px + env(safe-area-inset-bottom)); }
+  #reps h2 { font-size: 28px; }
+  #reps a.call { font-size: min(24px, 6.3vw); }
+  #reps .cheer { font-size: 18px; }
+}
+/* lying down: little room above the keyboard, so the placard starts at the top here too */
+@media (max-height: 500px) and (orientation: landscape) { #reps { align-items: flex-start; } #reps .box { margin-top: 8px; } #reps .intro { display: none; } #reps h2 { font-size: 24px; } }
+@media (max-height: 500px) and (orientation: landscape) and (max-width: 700px) { #reps .box { margin-top: 0; } }
+@media (prefers-reduced-motion: reduce) { #repsbtn:not(.seen), .rep.pop::after { animation: none; } }
+/* under mann.cool's shell (see the end of style.css) its buttons keep the top corners, so the placard hangs below them:
+   on a phone and on an upright tablet under them; lying down, where height is short, between them instead */
+@media (max-width: 700px) {
+  html:has(> mann-cool-game-shell) #reps { padding-top: calc(max(12px, env(safe-area-inset-top)) + 50px); }
+  html:has(> mann-cool-game-shell) #reps .box { max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - 50px); }
+}
+@media (min-width: 701px) and (max-width: 919px) and (min-height: 501px) {
+  html:has(> mann-cool-game-shell) #reps { padding-top: calc(max(12px, env(safe-area-inset-top)) + 54px); padding-bottom: 12px; }
+  html:has(> mann-cool-game-shell) #reps .box { max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - 66px); }
+}
+@media (min-width: 701px) and (max-height: 500px) {
+  html:has(> mann-cool-game-shell) #reps { padding-left: var(--mc-home, calc(max(12px, env(safe-area-inset-left)) + 214px)); padding-right: calc(max(10px, env(safe-area-inset-right)) + 140px); }
+  html:has(> mann-cool-game-shell) #reps .box { width: min(460px, 100%); }
+  html:has(> mann-cool-game-shell) #reps a.call { font-size: min(27px, 2.9vw); }   /* the number stays inside its button in the narrower placard */
+}
+@media (max-width: 760px), (max-height: 500px) { html:has(> mann-cool-game-shell) #reps .cheer { margin-top: 34px; } }

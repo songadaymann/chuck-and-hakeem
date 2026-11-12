@@ -1,0 +1,221 @@
+/* The look: a construction site run by protesters. Cardboard placards, hazard stripes, thick black outlines,
+   a dirt-caked display face (Rubik Dirt) and a pixel face (Silkscreen) for everything else. */
+/* Rubik Dirt cut down to the characters the game draws (tools/README: pyftsubset, basic Latin): 190 KB instead of 310 */
+@font-face { font-family: 'Rubik Dirt'; font-style: normal; font-weight: 400; font-display: swap; src: url(./fonts/rubik-dirt-basic.woff2) format('woff2'); }
+:root { --yellow: #ffc21a; --ink: #14110d; --card: #ead9b0; --dirt: #6b4a2b; --red: #e2392f; --green: #3fae5a;
+  --big: "Rubik Dirt", Impact, sans-serif; --px: Silkscreen, ui-monospace, Menlo, monospace;
+  --stripes: repeating-linear-gradient(-45deg, var(--yellow) 0 8px, var(--ink) 8px 16px); }
+html, body { margin: 0; height: 100%; background: #000; color: #fff; font: 16px/1.3 var(--px); overflow: hidden; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none; overscroll-behavior: none; -webkit-font-smoothing: none; }
+#c { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; touch-action: none; }
+#hud > * { position: fixed; text-shadow: 2px 2px 0 #000; pointer-events: none; }
+[hidden] { display: none !important; }
+
+/* top centre: who is here, and the notice line */
+#timer { top: 10px; left: calc(max(14px, env(safe-area-inset-left)) + 372px); right: calc(max(14px, env(safe-area-inset-right)) + 204px); margin: 0 auto; width: max-content; max-width: calc(100vw - 600px); font-size: 14px; text-align: center; white-space: pre-wrap; background: var(--ink); padding: 3px 10px; text-shadow: none; color: var(--card); }
+#timer:empty { display: none; }
+/* the way back to the placard: your code, your look, the keys */
+#menubtn { pointer-events: auto; top: max(12px, env(safe-area-inset-top)); left: calc(max(14px, env(safe-area-inset-left)) + 286px); font-size: 11px; padding: 3px 7px; box-shadow: 2px 2px 0 var(--ink); text-shadow: none; opacity: .85; }
+
+/* top left: the two men */
+#giants { top: max(12px, env(safe-area-inset-top)); left: max(14px, env(safe-area-inset-left)); display: flex; gap: 16px; }
+.man { width: 124px; text-align: center; transform: rotate(-2deg); }
+.man + .man { transform: rotate(1.5deg); }
+.man .face { display: block; margin: 0 auto; width: 96px; height: 96px; image-rendering: pixelated; border: 4px solid var(--ink); box-shadow: 4px 4px 0 #000; background: #4f7fb5; }
+.man b { display: block; font: 700 16px/1 var(--px); font-variant-numeric: tabular-nums; color: var(--yellow); margin-top: 6px; text-shadow: 2px 2px 0 #000; letter-spacing: 0; white-space: nowrap; }
+.man span { display: block; font-size: 14px; font-weight: 700; }
+.man em { display: block; font-style: normal; font-size: 12px; line-height: 1.15; }
+.man.dug .face { border-color: var(--green); } .man.dug b, .man.dug em { color: var(--green); }
+.man.lost .face { border-color: var(--red); filter: grayscale(1); } .man.lost b, .man.lost em { color: var(--red); }
+.man.super .face { border-color: var(--yellow); animation: blink .5s steps(2) infinite; } .man.super em { color: var(--yellow); }
+@keyframes blink { 50% { border-color: #fff; } }
+
+/* top right: lobbies that are out for you right now */
+#mounds { top: max(12px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); width: 190px; text-align: right; font-size: 13px; font-weight: 700; }
+#mounds > div { margin-bottom: 6px; }
+#mounds span { background: var(--c); padding: 1px 6px; border: 3px solid var(--ink); border-bottom: 0; text-shadow: none; display: inline-block; }
+#mounds .bar { margin: 0; } #mounds .bar i { background: var(--c); margin-left: auto; }
+
+.bar { height: 12px; background: #000a; border: 3px solid var(--ink); margin: 3px 0 2px; box-shadow: 3px 3px 0 #0008; }
+.bar i { display: block; height: 100%; width: 0; background: var(--stripes); }
+.bar.hp i { background: var(--red); }
+
+/* bottom left: you */
+#bottom { left: max(14px, env(safe-area-inset-left)); bottom: max(12px, env(safe-area-inset-bottom)); width: 280px; }
+#tool { font: 26px/1 var(--big); color: var(--card); text-shadow: 3px 3px 0 #000; }
+#bottom small { display: block; font-size: 12px; margin-bottom: 4px; }
+#effects { color: var(--yellow); min-height: 18px; font-size: 13px; font-weight: 700; }
+#map { right: max(14px, env(safe-area-inset-right)); bottom: max(12px, env(safe-area-inset-bottom)); background: #14110dcc; border: 3px solid var(--ink); box-shadow: 3px 3px 0 #0008; image-rendering: pixelated; }
+
+#toast { left: 50%; top: 20%; transform: translateX(-50%) rotate(-1.5deg); font: 30px/1.1 var(--big); color: var(--card); text-shadow: 3px 3px 0 #000; text-align: center; pointer-events: none; white-space: pre; }
+#toast.in { animation: slam .25s steps(5); }
+#toast.big { color: var(--yellow); font-size: 38px; }
+@keyframes slam { from { transform: translateX(-50%) rotate(-7deg) scale(2.2); opacity: 0; } }
+/* crowd news, under the lobby list */
+#feed { top: max(12px, env(safe-area-inset-top)); right: max(14px, env(safe-area-inset-right)); width: 230px; text-align: right; font-size: 11px; line-height: 1.25; color: var(--card); }
+#feed div { animation: feedin .3s steps(3); margin-bottom: 3px; }
+@keyframes feedin { from { transform: translateX(30px); opacity: 0; } }
+#pops { inset: 0; pointer-events: none; overflow: hidden; }
+#pops span { position: absolute; color: var(--yellow); font-size: 16px; font-weight: 700; transform: translate(-50%, -50%); animation: rise 0.9s ease-out forwards; white-space: nowrap; will-change: transform, opacity; }
+#pops span.dim { color: var(--card); font-size: 12px; opacity: .8; }
+#pops span.loud { font: 24px/1 var(--big); color: #fff; }
+@keyframes rise { to { transform: translate(-50%, calc(-50% - 46px)); opacity: 0; } }
+/* speech bubbles pinned to things in the world */
+#pops .say { width: max-content; position: absolute; transform: translate(-50%, -100%); max-width: min(240px, 62vw); background: #fff; color: #000; text-shadow: none; padding: 6px 9px; border: 3px solid #000; box-shadow: 3px 3px 0 #000; font-size: 13px; font-weight: 700; line-height: 1.15; text-align: center; animation: sayin .2s steps(3); }
+#pops .say::after { content: ""; position: absolute; left: 50%; bottom: -11px; margin-left: -6px; border: 6px solid transparent; border-top-color: #000; }
+#pops .say.lobby { background: var(--ink); color: #fff; border-color: #fff; }
+@keyframes sayin { from { transform: translate(-50%, -100%) scale(.4); opacity: 0; } }
+#fx { inset: 0; pointer-events: none; overflow: hidden; }
+#fx .bubble { position: absolute; background: #fff; color: #000; text-shadow: none; padding: 6px 10px; border: 3px solid #000; font-size: 15px; font-weight: 700; box-shadow: 3px 3px 0 #000; }
+#fx .stamp { position: absolute; left: 50%; top: 45%; transform: translate(-50%,-50%) rotate(-12deg); color: var(--red); border: 5px solid var(--red); padding: 6px 14px; font: 34px/1 var(--big); text-shadow: none; background: #fffb; }
+#fx .slick { position: absolute; inset: 0; background: radial-gradient(ellipse at center, #0000 40%, #000c 100%); }
+
+/* placards: start, end, terms pop-up */
+#start, #end, #tos { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+#end { background: #000a; } #tos { background: #0004; }
+/* the start panel sits to one side so you can see who you are picking */
+#start { justify-content: flex-start; padding-left: 4vw; background: linear-gradient(90deg, #000c 0, #0000 60%); }
+.box { position: relative; background: var(--card); color: var(--ink); border: 4px solid var(--ink); box-shadow: 7px 7px 0 #000; padding: 26px 22px 14px; width: min(420px, 44vw); max-height: calc(100vh - 24px); max-height: calc(100dvh - 24px); overflow-y: auto; box-sizing: border-box; transform: rotate(-0.7deg); font-size: 14px; }
+.box::before { content: ""; position: absolute; left: 0; right: 0; top: 0; height: 12px; background: var(--stripes); border-bottom: 4px solid var(--ink); }
+.box p { margin: 10px 0; }
+#end .box { text-align: center; }
+#tos .box { background: #f4f4f4; width: min(360px, 90vw); text-align: center; transform: none; }
+h1 { margin: 4px 0 10px; font: 46px/0.92 var(--big); color: var(--ink); text-transform: uppercase; letter-spacing: 1px; }
+h1 i { font-style: normal; color: var(--dirt); } h1 span { display: block; color: var(--red); }
+.row { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 8px 0; font-weight: 700; }
+.row label { width: 56px; font-weight: 400; }
+#name { white-space: normal; line-height: 1.15; } .row span { flex: 1 0 92px; text-align: center; background: #fff8; border: 3px solid var(--ink); padding: 3px 4px; white-space: nowrap; overflow: hidden; }
+button { touch-action: manipulation; font: 700 14px var(--px); background: var(--yellow); color: var(--ink); border: 3px solid var(--ink); box-shadow: 3px 3px 0 var(--ink); padding: 5px 10px; cursor: pointer; text-transform: uppercase; }
+button:active { transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+button.alt { background: #fff8; }
+#play { font-size: 22px; padding: 10px 18px; width: 100%; }
+input { font: 14px var(--px); background: #fff8; color: var(--ink); border: 3px solid var(--ink); padding: 5px; text-transform: uppercase; width: 130px; }
+.keys { font-size: 12px; opacity: .9; }
+#code { user-select: all; -webkit-user-select: all; }
+.box a { color: var(--ink); }
+#loading { min-height: 16px; margin: 4px 0; color: var(--red); font-weight: 700; }
+/* start placard sections: a heading strip, then what belongs to it */
+.sec { margin: 14px 0 0; padding-top: 10px; border-top: 3px dashed var(--ink); }
+.sec h2 { margin: 0 0 6px; font: 20px/1 var(--big); text-transform: uppercase; color: var(--red); letter-spacing: 1px; }
+.sec .hint { margin: 0 0 8px; font-size: 12px; }
+.sec .lbl { margin: 8px 0 -2px; font-size: 11px; font-weight: 700; text-transform: uppercase; letter-spacing: 1px; color: var(--dirt); }
+#you .row { margin-top: 4px; }
+#you .row span { font-size: 15px; }
+.sec .repsline { margin: 0; }
+button.link { background: none; border: 0; box-shadow: none; padding: 0; text-decoration: underline; font: 12px var(--px); text-transform: none; }
+button.link:active { transform: none; }
+.foot { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+button:disabled { opacity: .55; cursor: default; }
+
+/* phones and tablets: thumb stick on the left, DIG on the right */
+#stick, #digbtn, .keys.tc { display: none; }
+body.touch .keys.tc { display: block; } body.touch .keys.kb { display: none; }
+body.touch #stick { display: block; left: calc(30px + env(safe-area-inset-left)); bottom: calc(150px + env(safe-area-inset-bottom)); width: 104px; height: 104px; box-sizing: border-box; border-radius: 50%; border: 4px solid var(--ink); background: #ead9b040; opacity: .45; }
+body.touch #stick.on { opacity: .9; }
+#knob { position: absolute; left: 50%; top: 50%; width: 48px; height: 48px; margin: -24px 0 0 -24px; box-sizing: border-box; border-radius: 50%; border: 4px solid var(--ink); background: var(--stripes); }
+body.touch #digbtn { display: block; pointer-events: auto; touch-action: none; right: calc(22px + env(safe-area-inset-right)); bottom: calc(30px + env(safe-area-inset-bottom)); width: 108px; height: 108px; padding: 0; border-radius: 50%; border-width: 4px; font: 30px/1 var(--big); text-shadow: none; opacity: .92; }
+body.touch #digbtn.on { background: var(--red); color: #fff; transform: translate(2px, 2px); box-shadow: 1px 1px 0 var(--ink); }
+body.touch #map { bottom: calc(152px + env(safe-area-inset-bottom)); width: 96px; height: 96px; }
+
+@media (max-height: 500px) and (orientation: landscape) {
+  .man { width: 92px; } .man .face { width: 68px; height: 68px; } .man b { font-size: 12px; }
+  #mounds { width: 130px; } #bottom { width: 200px; } #map { width: 80px; height: 80px; }
+  #toast { font-size: 20px; top: 140px; }
+  body.touch #stick:not(.on) { display: none; }
+  body.touch #map { width: 72px; height: 72px; bottom: calc(30px + env(safe-area-inset-bottom)); right: calc(142px + env(safe-area-inset-right)); }
+  h1 { font-size: 34px; }
+}
+@media (max-width: 700px) {
+  #toast.big { font-size: 24px; } #feed { width: 150px; font-size: 9px; }
+  #toast { font-size: 19px; white-space: pre-wrap; width: 92vw; }
+  #end .box { width: min(420px, calc(100vw - 24px)); }
+  #start { align-items: flex-end; justify-content: center; padding: 0; background: linear-gradient(0deg, #000c 0, #0000 75%); }
+  #start .box { width: 100%; max-height: 62vh; overflow: auto; transform: none; box-shadow: none; border-width: 4px 0 0; }
+  h1 { font-size: 34px; }
+  .man { width: 92px; } .man .face { width: 68px; height: 68px; } .man b { font-size: 12px; }
+  #mounds { margin-top: 30px; }   /* clear of the MENU and SOUND buttons */
+  #mounds { width: 130px; } #bottom { width: 200px; } #map { width: 96px; height: 96px; }
+}
+@media (max-width: 700px) { #menubtn { left: calc(max(14px, env(safe-area-inset-left)) + 206px); } }
+@media (max-height: 500px) and (orientation: landscape) { #menubtn { left: calc(max(14px, env(safe-area-inset-left)) + 206px); } .box p { margin: 6px 0; } }
+/* less motion for people who ask for it */
+@media (prefers-reduced-motion: reduce) { .man.super .face, #toast.in, #feed div, #pops .say { animation: none; } #fx .bubble { display: none; } }
+/* an upright phone: the status strip runs full width under the faces, crowd news under that, the big line below both */
+@media (max-width: 700px) and (orientation: portrait) {
+  #timer { top: calc(190px + env(safe-area-inset-top)); left: 0; right: 0; max-width: calc(100vw - 20px); font-size: 11px; }
+  #toast { top: max(30%, 232px); }
+  #feed { top: calc(216px + env(safe-area-inset-top)) !important; }
+}
+/* a phone on its side: no room at the top, so the strip sits at the bottom centre and the crowd news is dropped */
+@media (max-height: 500px) and (orientation: landscape) {
+  #timer { top: auto; bottom: max(6px, env(safe-area-inset-bottom)); left: 0; right: 0; max-width: calc(100vw - 440px); font-size: 11px; }
+  #feed { display: none; }
+}
+/* phones: Start stays in view while the rest of the placard scrolls behind it */
+@media (max-width: 700px), (max-height: 500px) { #start .box > p:has(> #play) { position: sticky; bottom: -14px; z-index: 2; margin: 0 -22px; padding: 8px 22px 12px; background: var(--card); border-top: 3px solid var(--ink); } }
+@media (max-width: 350px) { #bottom { width: 164px; } #mounds { width: 112px; } }
+
+/* ---- Under mann.cool's shell. At mann.cool/leave/ the site lays its own buttons over the game, on top of everything:
+   the way back to mann.cool at the top left (about 206 x 48 with its shadow) and TIP and its menu at the top right
+   (about 140 x 52). These rules count only while its <mann-cool-game-shell> element is on the page, so on the game's
+   own address nothing here applies. The idea is the same at every size: the two men hang under its left button, the
+   lobby list under its right ones, and the strip between the two stays ours. */
+/* a wide or tall screen: the men, MENU and SOUND (plugins/audio.css) one row down; the status strip is already clear */
+@media (min-height: 501px) and (min-width: 701px), (min-height: 501px) and (orientation: landscape) {
+  html:has(> mann-cool-game-shell) #giants, html:has(> mann-cool-game-shell) #menubtn { top: calc(max(12px, env(safe-area-inset-top)) + 56px); }
+  html:has(> mann-cool-game-shell) #mounds, html:has(> mann-cool-game-shell) #feed { top: calc(max(12px, env(safe-area-inset-top)) + 60px); }
+  html:has(> mann-cool-game-shell) #toast { top: calc(20% + 56px); }   /* the big line keeps its distance from them */
+}
+/* an upright phone: its buttons fill the top edge, so the whole stack (men, list, strip, news, big line) drops by a row.
+   MENU joins SOUND and CHEER in the stack by the map (plugins/audio.css, social.css), which lets the list start right under its buttons. */
+@media (max-width: 700px) and (orientation: portrait) {
+  html:has(> mann-cool-game-shell) #giants, html:has(> mann-cool-game-shell) #mounds { top: calc(max(12px, env(safe-area-inset-top)) + 54px); }
+  html:has(> mann-cool-game-shell) #mounds { margin-top: 0; }
+  html:has(> mann-cool-game-shell) #menubtn { top: auto; left: auto; right: max(14px, env(safe-area-inset-right)); bottom: calc(max(12px, env(safe-area-inset-bottom)) + 192px); }
+  html:has(> mann-cool-game-shell) body.touch #menubtn { right: calc(120px + env(safe-area-inset-right)); bottom: calc(230px + env(safe-area-inset-bottom)); }
+  html:has(> mann-cool-game-shell) #timer { top: calc(244px + env(safe-area-inset-top)); }
+  html:has(> mann-cool-game-shell) #toast { top: max(30%, 286px); }
+  html:has(> mann-cool-game-shell) #feed { top: calc(270px + env(safe-area-inset-top)) !important; }
+  /* three small tabs in one stack now: each also takes the presses that land in the gaps around it (nothing moves or looks different) */
+  html:has(> mann-cool-game-shell) body.touch #menubtn::after, html:has(> mann-cool-game-shell) body.touch #hud > #sndbtn::after, html:has(> mann-cool-game-shell) body.touch #hud > #cheerbtn::after { content: ""; position: absolute; inset: -8px -9px; }   /* from inside the 3px border: 5px more above and below, 6px at the sides */
+}
+/* a short one: the row its buttons take is paid for with smaller faces and a one-line guide chip (plugins/guide.css),
+   so the big line still ends above CALL YOUR REPS */
+@media (max-width: 700px) and (orientation: portrait) and (max-height: 700px) {
+  html:has(> mann-cool-game-shell) .man .face { width: 52px; height: 52px; }
+  html:has(> mann-cool-game-shell) #timer { top: calc(216px + env(safe-area-inset-top)); }
+  html:has(> mann-cool-game-shell) #toast { top: max(30%, 252px); }
+  html:has(> mann-cool-game-shell) #feed { top: calc(242px + env(safe-area-inset-top)) !important; }
+}
+/* a shorter one still (a small phone with the browser's bars showing): under the strip the right side is CALL YOUR REPS
+   and the map, so the big line keeps to the column left of them, in smaller letters, and the crowd news is dropped */
+@media (max-width: 700px) and (orientation: portrait) and (max-height: 600px) {
+  html:has(> mann-cool-game-shell) #toast { top: 244px; left: calc(50vw - 62px); width: calc(100vw - 134px); font-size: 15px; }
+  html:has(> mann-cool-game-shell) #toast.big { font-size: 17px; }
+  html:has(> mann-cool-game-shell) #feed { display: none; }
+}
+/* a phone on its side: the men under its left button, MENU and SOUND beside it (--mc-home: main.js measures where it
+   ends), then the guide's chip (plugins/guide.css), and the lobby list under its right buttons */
+@media (max-height: 500px) and (orientation: landscape) {
+  html:has(> mann-cool-game-shell) #giants { top: calc(max(12px, env(safe-area-inset-top)) + 54px); }
+  html:has(> mann-cool-game-shell) #menubtn { left: var(--mc-home, calc(max(12px, env(safe-area-inset-left)) + 214px)); }
+  html:has(> mann-cool-game-shell) #mounds { top: calc(max(10px, env(safe-area-inset-top)) + 60px); margin-top: 0; }
+  /* the big line stays in the middle, between the men and the list, now that both reach lower */
+  html:has(> mann-cool-game-shell) #toast { max-width: calc(100vw - 440px); white-space: pre-wrap; }
+  html:has(> mann-cool-game-shell) #toast.big { font-size: clamp(20px, 2.9vw, 28px); }
+  html:has(> mann-cool-game-shell) #end { padding-top: calc(max(12px, env(safe-area-inset-top)) + 50px); }
+  html:has(> mann-cool-game-shell) #end .box { max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - 62px); }
+}
+/* the same inside a browser, with its bars taking height: smaller faces and a tighter list, so the men's names end above
+   your tool and effects, and two open nests end above CALL YOUR REPS */
+@media (max-height: 360px) and (orientation: landscape) {
+  html:has(> mann-cool-game-shell) .man .face { width: 44px; height: 44px; }
+  html:has(> mann-cool-game-shell) #mounds { width: 150px; }
+  html:has(> mann-cool-game-shell) #mounds > div { margin-bottom: 3px; }
+  html:has(> mann-cool-game-shell) #mounds span { white-space: nowrap; font-size: 10px; padding: 0 5px; border-width: 2px; }
+  html:has(> mann-cool-game-shell) #mounds .bar { height: 6px; border-width: 2px; box-shadow: none; }
+}
+/* the placard at the side starts under its left button (on a phone it is a sheet at the bottom, clear already) */
+@media (min-width: 701px) {
+  html:has(> mann-cool-game-shell) #start { padding-top: calc(max(12px, env(safe-area-inset-top)) + 54px); padding-bottom: 12px; }
+  html:has(> mann-cool-game-shell) #start .box { max-height: calc(100dvh - max(12px, env(safe-area-inset-top)) - 66px); }
+}

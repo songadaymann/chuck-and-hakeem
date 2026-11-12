@@ -1,0 +1,58 @@
+<!doctype html>
+<!-- The label printed on the mann.cool cartridge cover: 348 x 571 CSS px (the label window measured on the catalog's
+     cartridge), rendered at 4x by tools/cover/build.mjs. Every picture in it is a cut-out from the game itself
+     (tools/cover/render.mjs writes them to parts/). -->
+<meta charset="utf-8">
+<style>
+@font-face { font-family: "Rubik Dirt"; src: url("../../src/fonts/rubik-dirt-basic.woff2") format("woff2"); }
+@font-face { font-family: Silkscreen; font-weight: 400; src: url("../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-400-normal.woff2") format("woff2"); }
+@font-face { font-family: Silkscreen; font-weight: 700; src: url("../../node_modules/@fontsource/silkscreen/files/silkscreen-latin-700-normal.woff2") format("woff2"); }
+:root { --yellow: #ffc21a; --ink: #14110d; --card: #ead9b0; --red: #e2392f; --stripes: repeating-linear-gradient(-45deg, var(--yellow) 0 8px, var(--ink) 8px 16px); }
+html, body { margin: 0; background: #000; }
+#label { position: relative; width: 348px; height: 571px; overflow: hidden; background: linear-gradient(#1f5fd0 0%, #3f8ae8 34%, #9ad0ff 62%, #cfeaff 74%); }
+#label > * { position: absolute; }
+/* box-art sunburst behind the dome */
+#rays { left: -200px; top: -130px; width: 748px; height: 748px; background: repeating-conic-gradient(from 0deg at 50% 50%, #ffffff00 0deg 9deg, #ffffff2e 9deg 18deg); -webkit-mask: radial-gradient(circle, #000 0 38%, #0000 70%); mask: radial-gradient(circle, #000 0 38%, #0000 70%); }
+.cloud { background: #fff; box-shadow: 10px 6px 0 #dfeeff; }
+#capitol { left: -131px; top: 136px; width: 610px; image-rendering: auto; }
+.head { filter: drop-shadow(2px 0 0 var(--ink)) drop-shadow(-2px 0 0 var(--ink)) drop-shadow(0 -2px 0 var(--ink)) saturate(1.22) contrast(1.08); }
+#chuck { left: -34px; top: 222px; width: 232px; transform: rotate(-5deg); }
+#hakeem { left: 150px; top: 226px; width: 236px; transform: rotate(5deg); }
+#dirt { left: 0; top: 0; width: 348px; height: 571px; background: url(parts/dirt.png) 0 0 / 300px 300px; filter: saturate(1.15) contrast(1.1);
+  clip-path: polygon(0 392px, 18px 384px, 40px 390px, 62px 378px, 88px 386px, 112px 398px, 138px 392px, 160px 404px, 182px 396px, 204px 400px, 228px 388px, 250px 394px, 276px 380px, 300px 388px, 324px 380px, 348px 390px, 348px 571px, 0 571px); }
+#dirtedge { left: 0; top: 0; width: 348px; height: 571px; background: var(--ink);
+  clip-path: polygon(0 388px, 18px 380px, 40px 386px, 62px 374px, 88px 382px, 112px 394px, 138px 388px, 160px 400px, 182px 392px, 204px 396px, 228px 384px, 250px 390px, 276px 376px, 300px 384px, 324px 376px, 348px 386px, 348px 571px, 0 571px); }
+#dirtshade { left: 0; top: 380px; width: 348px; height: 191px; background: linear-gradient(#0000 0 35%, #1408006e 100%); }
+.dig { filter: drop-shadow(1.5px 0 0 var(--ink)) drop-shadow(-1.5px 0 0 var(--ink)) drop-shadow(0 -1.5px 0 var(--ink)) drop-shadow(0 1.5px 0 var(--ink)) saturate(1.15); }
+#d1 { left: 188px; top: 392px; width: 84px; }
+#d2 { left: 72px; top: 398px; width: 78px; }
+.shadow { height: 12px; border-radius: 50%; background: #1408008c; }
+.clod { width: 9px; height: 8px; background: #7a5330; border: 2px solid var(--ink); }
+/* the game's own cardboard placard */
+#title { left: 14px; top: 16px; width: 314px; transform: rotate(-2deg); background: var(--card); border: 4px solid var(--ink); box-shadow: 6px 6px 0 #0009; text-align: center; padding: 0 0 9px; }
+#title i { display: block; height: 12px; background: var(--stripes); border-bottom: 4px solid var(--ink); }
+#title b { display: block; font: 400 47px/0.98 "Rubik Dirt", Impact, sans-serif; color: var(--ink); letter-spacing: .5px; margin-top: 8px; }
+#title b u { text-decoration: none; color: #8a5a2c; }
+#title em { display: block; font: 400 43px/1 "Rubik Dirt", Impact, sans-serif; color: var(--red); font-style: normal; margin-top: 2px; }
+#mark { right: 10px; bottom: 9px; font: 700 12px/1.05 Silkscreen, monospace; color: var(--yellow); text-align: right; text-shadow: 2px 2px 0 var(--ink), -1px -1px 0 var(--ink), 1px -1px 0 var(--ink), -1px 1px 0 var(--ink); letter-spacing: 1px; }
+#mark small { display: block; font-size: 9px; color: #fff; }
+#seal { left: 8px; bottom: 8px; width: 50px; height: 50px; }
+</style>
+<div id="label">
+  <div id="rays"></div>
+  <div class="cloud" style="left:20px;top:150px;width:54px;height:14px"></div><div class="cloud" style="left:34px;top:138px;width:30px;height:14px"></div>
+  <div class="cloud" style="left:268px;top:176px;width:60px;height:14px"></div><div class="cloud" style="left:284px;top:164px;width:30px;height:14px"></div>
+  <img id="capitol" src="parts/capitol.png">
+  <img id="chuck" class="head" src="parts/chuck.png">
+  <img id="hakeem" class="head" src="parts/hakeem.png">
+  <div id="dirtedge"></div><div id="dirt"></div><div id="dirtshade"></div>
+  <div class="shadow" style="left:66px;top:503px;width:62px"></div><div class="shadow" style="left:216px;top:519px;width:52px"></div>
+  <img id="d2" class="dig" src="parts/digger2.png">
+  <img id="d1" class="dig" src="parts/digger.png">
+  <div class="clod" style="left:150px;top:372px;transform:rotate(18deg)"></div><div class="clod" style="left:170px;top:356px;transform:rotate(-12deg);width:7px;height:6px"></div>
+  <div class="clod" style="left:262px;top:404px;transform:rotate(30deg)"></div><div class="clod" style="left:276px;top:386px;transform:rotate(8deg);width:7px;height:6px"></div>
+  <div class="clod" style="left:60px;top:420px;transform:rotate(-20deg);width:7px;height:6px"></div><div class="clod" style="left:160px;top:470px;transform:rotate(24deg)"></div><div class="clod" style="left:286px;top:452px;transform:rotate(-14deg)"></div>
+  <div id="title"><i></i><b>CHUCK <u>&amp;</u><br>HAKEEM</b><em>WON'T LEAVE</em></div>
+  <svg id="seal" viewBox="0 0 100 100"><polygon fill="#ffc21a" stroke="#14110d" stroke-width="4" points="50,3 58,13 70,7 74,19 87,18 86,31 97,36 91,47 99,57 89,64 92,77 80,79 77,91 65,88 57,98 48,90 37,97 33,85 20,86 21,73 9,68 15,57 4,48 14,40 9,28 21,24 23,12 35,15 41,4"/><ellipse cx="50" cy="50" rx="30" ry="30" fill="#14110d"/><text x="50" y="43" text-anchor="middle" font-family="Silkscreen" font-weight="700" font-size="11" fill="#ffc21a">SONG</text><text x="50" y="55" text-anchor="middle" font-family="Silkscreen" font-weight="700" font-size="11" fill="#fff">A DAY</text><text x="50" y="66" text-anchor="middle" font-family="Silkscreen" font-size="8" fill="#ffc21a">SEAL</text></svg>
+  <div id="mark">SONG-A-DAY<small>GAMES</small></div>
+</div>

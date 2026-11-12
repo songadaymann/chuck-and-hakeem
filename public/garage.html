@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Tool garage</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px/1.4 ui-monospace, Menlo, monospace; }
+  canvas { position: fixed; inset: 0; width: 100%; height: 100%; image-rendering: pixelated; }
+  #ui { position: fixed; left: 8px; top: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 6px; }
+  button, a { font: inherit; background: #222; color: #ddd; border: 1px solid #555; padding: 4px 8px; cursor: pointer; text-decoration: none; }
+  button.on { background: #ddd; color: #111; }
+  #info { position: fixed; left: 8px; bottom: 8px; white-space: pre; text-shadow: 0 1px 0 #000; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="ui"></div>
+<div id="info"></div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+import * as SkeletonUtils from 'three/addons/utils/SkeletonUtils.js';
+
+const LADDER = [
+  ['shovel', 'hand', 'dig'], ['pickaxe', 'hand', 'swing'], ['jackhammer', 'hand', 'jackhammer'], ['trencher', 'hand', 'push'],
+  ['skid_steer', 'vehicle'], ['backhoe_loader', 'vehicle'], ['excavator', 'vehicle'], ['bulldozer', 'vehicle'],
+  ['mining_shovel', 'vehicle'], ['bucket_wheel_excavator', 'vehicle'],
+];
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x6f8fb0);
+const camera = new THREE.PerspectiveCamera(45, 4 / 3, 0.1, 2000);
+const controls = new OrbitControls(camera, canvas);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x556644, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4); sun.position.set(3, 5, 4); scene.add(sun);
+const snap = { value: new THREE.Vector2(160, 120) };
+function ps1ify(mat) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uSnap = snap;
+    sh.vertexShader = 'uniform vec2 uSnap;\n' + sh.vertexShader.replace('#include <project_vertex>',
+      '#include <project_vertex>\n if (uSnap.x > 0.0) { vec2 p = gl_Position.xy / gl_Position.w; p = floor(p * uSnap + 0.5) / uSnap; gl_Position.xy = p * gl_Position.w; }');
+  };
+  return mat;
+}
+function retro(root, alpha) {
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.frustumCulled = false;
+    const tex = o.material.map; if (tex) { tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true; }
+    o.material = ps1ify(new THREE.MeshLambertMaterial({ map: tex, alphaTest: alpha ? 0.5 : 0, side: alpha ? THREE.DoubleSide : THREE.FrontSide }));
+  });
+  return root;
+}
+const gc = document.createElement('canvas'); gc.width = gc.height = 32; const gx = gc.getContext('2d');
+for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) { gx.fillStyle = (x + y) % 2 ? '#5b4a33' : '#6b5a3f'; gx.fillRect(x * 16, y * 16, 16, 16); }
+const gt = new THREE.CanvasTexture(gc); gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(200, 200);
+gt.magFilter = gt.minFilter = THREE.NearestFilter; gt.colorSpace = THREE.SRGBColorSpace;
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(400, 400, 60, 60), ps1ify(new THREE.MeshLambertMaterial({ map: gt })));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+const loader = new GLTFLoader();
+const who = new URLSearchParams(location.search).get('who') || 'Male_Adult_01';
+const personGltf = await loader.loadAsync('models/' + who + '.glb');
+retro(personGltf.scene, true);
+const wheel = new THREE.Group();
+const dark = ps1ify(new THREE.MeshLambertMaterial({ color: 0x2b2b2b }));
+const ring = new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.02, 4, 10), dark); ring.rotation.x = Math.PI / 2;
+wheel.add(ring, new THREE.Mesh(new THREE.BoxGeometry(0.38, 0.03, 0.03), dark));
+
+let current = null, mixer = null, vmixer = null, spin = [];
+async function show(name, kind, clip) {
+  if (current) scene.remove(current);
+  current = new THREE.Group(); scene.add(current); spin = []; vmixer = null;
+  const person = SkeletonUtils.clone(personGltf.scene);
+  mixer = new THREE.AnimationMixer(person);
+  const play = (c) => mixer.clipAction(personGltf.animations.find((a) => a.name === c)).play();
+  const toolBone = person.getObjectByName('Tool');
+  const fit = (prop) => { person.updateMatrixWorld(true); const ws = new THREE.Vector3(); toolBone.getWorldScale(ws); prop.scale.setScalar(1 / ws.x); toolBone.add(prop); };
+  let info = '';
+  try {
+    const g = await loader.loadAsync('models/tools/' + name + '.glb');
+    retro(g.scene, false);
+    let tris = 0; g.scene.traverse((o) => { if (o.isMesh) tris += o.geometry.index ? o.geometry.index.count / 3 : o.geometry.attributes.position.count / 3; });
+    const box = new THREE.Box3().setFromObject(g.scene), size = box.getSize(new THREE.Vector3());
+    info = `${name}   ${tris} tris   ${size.x.toFixed(1)} x ${size.y.toFixed(1)} x ${size.z.toFixed(1)} m (w x h x l)`;
+    if (kind === 'hand') {
+      current.add(person); fit(g.scene); play(clip);
+      camera.position.set(3, 1.6, 3.5); controls.target.set(0, 0.9, 0);
+    } else {
+      current.add(g.scene); g.scene.updateMatrixWorld(true);
+      const seat = g.scene.getObjectByName('Seat');
+      if (seat) { seat.add(person); fit(wheel.clone()); play('drive'); } else info += '   (no Seat marker)';
+      const digClip = g.animations.find((a) => a.name === (new URLSearchParams(location.search).get('vclip') || 'dig'));
+      if (digClip) { vmixer = new THREE.AnimationMixer(g.scene); vmixer.clipAction(digClip).play(); info += `   clips: ${g.animations.map((a) => a.name + ' ' + a.duration.toFixed(1) + 's').join(', ')}`; }
+      else { for (const n of ['BucketWheel', 'Wheel_FL', 'Wheel_FR', 'Wheel_RL', 'Wheel_RR']) { const o = g.scene.getObjectByName(n); if (o) spin.push(o); } info += '   (no dig clip yet)'; }
+      window.__v = { scene: g.scene, clip: digClip, get mixer() { return vmixer; } };
+      const c = box.getCenter(new THREE.Vector3()), r = size.length() / 2;
+      camera.position.set(c.x + r * 1.1, c.y + r * 0.5, c.z + r * 1.3); controls.target.copy(c);
+      window.__seat = seat ? seat.getWorldPosition(new THREE.Vector3()) : null;
+    }
+  } catch (e) { info = name + ': model file not found'; current.add(person); play('idle'); }
+  document.getElementById('info').textContent = info;
+  document.querySelectorAll('button[data-n]').forEach((b) => b.classList.toggle('on', b.dataset.n === name));
+}
+const ui = document.getElementById('ui');
+LADDER.forEach(([n, k, c], i) => { const b = document.createElement('button'); b.textContent = (i + 1) + ' ' + n.replaceAll('_', ' '); b.dataset.n = n; b.onclick = () => show(n, k, c); ui.append(b); });
+const back = document.createElement('a'); back.href = 'people.html'; back.textContent = 'people'; ui.append(back);
+
+function resize() {
+  const w = innerWidth, h = innerHeight, rw = 400, rh = Math.round(400 * h / w);
+  renderer.setSize(rw, rh, false); camera.aspect = w / h; camera.updateProjectionMatrix(); snap.value.set(rw / 2, rh / 2);
+}
+addEventListener('resize', resize); resize();
+const first = LADDER.find((l) => l[0] === new URLSearchParams(location.search).get('show')) || LADDER[0];
+await show(...first);
+window.__garage = { show, LADDER, camera, controls };
+const clock = new THREE.Clock(); let acc = 0;
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta(); acc += dt;
+  if (acc >= 1 / 15) { if (mixer) mixer.update(acc); if (vmixer) vmixer.update(acc); for (const o of spin) o.rotation.x += acc * 0.8; acc = 0; }
+  controls.update(); renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>

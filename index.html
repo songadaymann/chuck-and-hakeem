@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Chuck &amp; Hakeem Won't Leave</title>
+<meta name="description" content="Chuck Schumer and Hakeem Jeffries are buried at the Capitol and will not step aside. Grab a shovel: the whole country digs them out together, live.">
+<meta property="og:title" content="Chuck &amp; Hakeem Won't Leave">
+<meta property="og:description" content="They are dug in at the Capitol. Grab a shovel: the whole country digs them out together, live.">
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://mann.cool/leave/">
+<meta property="og:image" content="https://mann.cool/leave/og.jpg">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="theme-color" content="#14110d">
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16' shape-rendering='crispEdges'%3E%3Crect width='16' height='16' fill='%2314110d'/%3E%3Cpath d='M9 2h2v7H9z' fill='%23ead9b0'/%3E%3Cpath d='M7 9h6v2h-1v2h-1v1H9v-1H8v-2H7z' fill='%23ffc21a'/%3E%3Cpath d='M2 12h5v2H2z' fill='%236b4a2b'/%3E%3C/svg%3E">
+<link rel="stylesheet" href="./src/style.css">
+</head>
+<body>
+<canvas id="c"></canvas>
+<div id="hud" hidden>
+  <div id="timer"></div>
+  <div id="pops"></div>
+  <div id="giants"></div>
+  <div id="mounds"></div>
+  <div id="feed"></div>
+  <div id="bottom">
+    <div id="effects"></div>
+    <div id="tool"></div>
+    <div class="bar"><i id="toolbar"></i></div>
+    <small id="next"></small>
+    <div class="bar hp"><i id="hpbar"></i></div>
+    <small id="dug"></small>
+  </div>
+  <canvas id="map" width="140" height="140"></canvas>
+  <div id="stick"><i id="knob"></i></div>
+  <button id="digbtn">DIG</button>
+  <button id="menubtn" aria-label="menu and your code">MENU</button>
+  <div id="toast"></div>
+  <div id="fx"></div>
+</div>
+<div id="tos" hidden><div class="box"><b>TERMS OF SERVICE UPDATE</b><p id="tostext"></p><button id="tosbtn">I AGREE</button></div></div>
+<div id="start">
+  <div class="box">
+    <h1>Chuck <i>&amp;</i> Hakeem <span>Won't Leave</span></h1>
+    <p>Chuck Schumer and Hakeem Jeffries have buried themselves at the Capitol and will not step aside. Dig them out before their clocks run down. The whole country digs the same two piles.</p>
+    <p><button id="play" disabled>Getting your shovel...</button></p>
+    <p id="loading">loading...</p>
+    <section class="sec" id="you">
+      <h2>Your digger</h2>
+      <p class="hint">That's you on screen. Pick a look and a name; other players see both.</p>
+      <div class="lbl">Look</div>
+      <div class="row"><button id="prev" class="alt" aria-label="previous look">&lt;</button><span id="who"></span><button id="nextchar" class="alt" aria-label="next look">&gt;</button><button id="rand" class="alt">random</button></div>
+      <div class="lbl">Name</div>
+      <div class="row"><span id="name"></span><button id="rename" class="alt">new name</button></div>
+    </section>
+    <section class="sec" id="how">
+      <h2>How to play</h2>
+      <p class="keys tc">Left thumb moves: push all the way to run · drag anywhere else to look · hold DIG to dig, and to swat lobbyists</p>
+      <p class="keys kb">WASD move · mouse look · hold SPACE or click to dig, and to swat lobbyists · SHIFT run · E cheer · ESC frees the mouse</p>
+    </section>
+    <section class="sec" id="progress">
+      <h2>Your progress</h2>
+      <p class="keys" id="codeline" hidden>Your code: <b id="code"></b> <button id="copycode" class="alt">copy</button><br>No sign-up. This code is your progress: enter it on another device to carry on.</p>
+      <p class="keys"><input id="codein" placeholder="have a code?" size="16" maxlength="16" autocapitalize="characters" autocomplete="off" autocorrect="off" spellcheck="false"> <button id="usecode" class="alt">use it</button></p>
+      <p class="keys foot"><button id="sharestart" class="alt">share</button> <a href="./credits.txt" target="_blank" rel="noopener">credits</a> <button id="reset" class="link">start over</button></p>
+    </section>
+  </div>
+</div>
+<div id="end" hidden><div class="box"><h1 id="endtitle"></h1><p id="endtext"></p><p id="endstat"></p><p><button id="shareend">Share</button> <button id="lookaround" class="alt">Look around</button></p></div></div>
+<script type="module" src="./src/main.js"></script>
+</body>
+</html>

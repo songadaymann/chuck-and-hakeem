@@ -1,0 +1,26 @@
+/* Juice: the small answers to what you do. Captions are cardboard placards with a hazard edge, never speech bubbles. */
+#pops .say.jn { background: var(--card); color: var(--ink); border-color: var(--ink); padding: 10px 9px 6px; font-size: 12px; text-transform: uppercase; }
+#pops .say.jn::after { left: 0; right: 0; top: 0; bottom: auto; margin: 0; height: 4px; border: 0; background: var(--stripes); }
+#pops .say.jn.think { background: #fff; padding: 2px 10px 6px; font-size: 18px; letter-spacing: 2px; }
+#pops .say.jn.think::after { display: none; }
+#pops .say.jn.found b { display: block; font: 17px/1 var(--big); color: var(--red); margin-bottom: 3px; }
+#pops .say.jn.found i { display: block; font-style: normal; font-weight: 400; font-size: 10px; margin-top: 4px; opacity: .75; }
+#pops span.jcost { color: var(--red); font-size: 20px; }
+#pops span.jword { font: 22px/1 var(--big); color: var(--card); }
+
+/* the tagline under a new tool's name */
+#toast .jtag { display: table; margin: 7px auto 0; padding: 3px 9px 4px; background: var(--ink); font: 700 14px/1.2 var(--px); color: var(--card); text-shadow: none; white-space: normal; letter-spacing: 0; }
+
+/* a lobbyist's shot landing: the screen takes the lobby's colour for a blink */
+#fx .jflash { position: absolute; inset: 0; background: var(--c); opacity: 0; animation: jflash .35s steps(5); }
+@keyframes jflash { from { opacity: .5; } }
+
+/* nearly at the next tool: the bar gets impatient */
+.bar.jalmost { animation: jalmost .5s steps(2) infinite; }
+@keyframes jalmost { 50% { border-color: var(--yellow); } }
+
+/* the button that never declines */
+#jdecline { margin: 8px 0 0 8px; max-width: 100%; }
+
+@media (max-width: 700px) { #toast .jtag { font-size: 12px; } #pops span.jword { font-size: 18px; } }
+@media (prefers-reduced-motion: reduce) { #fx .jflash { display: none; } .bar.jalmost { animation: none; border-color: var(--yellow); } }

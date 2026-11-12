@@ -1,0 +1,132 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Control room</title>
+<style>
+  body { margin: 0; padding: 20px; background: #14110d; color: #ead9b0; font: 15px/1.45 ui-monospace, Menlo, monospace; max-width: 760px; }
+  h1 { font-size: 20px; color: #ffc21a; } h2 { font-size: 16px; margin: 26px 0 6px; color: #ffc21a; }
+  label { display: block; margin: 8px 0 2px; } small { opacity: .7; display: block; }
+  input, select, button { font: inherit; padding: 6px 8px; background: #2a241b; color: #fff; border: 2px solid #6b4a2b; box-sizing: border-box; }
+  input, select { width: 100%; max-width: 360px; }
+  button { background: #ffc21a; color: #14110d; border-color: #14110d; cursor: pointer; margin-top: 16px; font-weight: bold; }
+  fieldset { border: 2px solid #6b4a2b; margin: 14px 0; padding: 8px 14px 14px; } legend { color: #ffc21a; padding: 0 6px; }
+  pre { background: #000; padding: 10px; overflow: auto; font-size: 13px; }
+  #msg { color: #ff5a4f; min-height: 20px; }
+</style>
+</head>
+<body>
+<h1>Chuck &amp; Hakeem: control room</h1>
+<label>Key <input id="key" type="password" autocomplete="off"></label>
+<small>Kept in this browser only. Changes reach every player within a couple of seconds.</small>
+<button id="load">Load</button>
+<div id="msg"></div>
+<form id="form" hidden>
+  <div id="men"></div>
+  <h2>Pacing</h2>
+  <label>Most the pile may outrun its schedule while people are playing (times) <input id="burst" type="number" step="any"></label>
+  <small>Higher = the pile visibly moves more for the people who are here, and a quiet game is easier to win.</small>
+  <label>Strongest a single dig can ever be (times normal) <input id="max" type="number" step="any"></label>
+  <label>Weakest a single dig can ever be <input id="min" type="number" step="any"></label>
+  <label>Aim to finish at this fraction of the time left (0.9 = a little early) <input id="finishBy" type="number" step="any"></label>
+  <label>Shovels' worth of digging, around the clock, that each pile needs to finish on time (0 = no limit, nobody can lose) <input id="target" type="number" step="any"></label>
+  <small>Roughly: the men get in unless the average number of people online is about half this. It also caps how much one dig can do, so higher = each dig moves less.</small>
+  <label>Furthest the pile may get ahead of its schedule (fraction of the pile, 0.1 = 10%) <input id="lead" type="number" step="any"></label>
+  <small>Digs are full strength until the pile is half this far ahead, then weaken, so a big crowd cannot finish weeks early.</small>
+  <label>Each tool is worth this many times the one before <input id="boost" type="number" step="any"></label>
+  <small>1.28 makes the top machine about 9 times a shovel. 1 makes every tool equal.</small>
+  <h2>Crowd</h2>
+  <label>Most players in the shared dig at once (blank = the game's own number) <input id="maxPlayers" type="number" step="1" min="0"></label>
+  <small>Everyone past this digs a private practice pile until a spot opens. Raise it in steps while watching the numbers below. 0 closes the shared dig to newcomers.</small>
+  <label>Most connections from one network address in one room (blank = the game's own number) <input id="perIp" type="number" step="1" min="1"></label>
+  <small>A dorm or an office shares one address. Lower it only if one address is hogging seats.</small>
+  <h2>Notice line</h2>
+  <label>Shown at the top of everyone's screen (blank for none) <input id="notice" maxlength="140"></label>
+  <button type="submit">Save</button>
+</form>
+<div id="levers" hidden>
+  <h2>Before a deploy</h2>
+  <small>A deploy restarts every room. Anything a player dug in the last minute and not yet written down would be lost.</small>
+  <button id="flush" type="button">Save everyone now</button>
+  <small>Press, wait about three seconds, then deploy.</small>
+  <h2>National counters</h2>
+  <small>Only to correct them (after a load test, say). Leave blank to keep.</small>
+  <label>Cubic metres dug by everyone, ever <input id="tot" type="number" step="1" min="0"></label>
+  <label>Calls to Congress logged <input id="calls" type="number" step="1" min="0"></label>
+  <button id="setCounters" type="button">Set counters</button>
+</div>
+<h2>Right now</h2>
+<pre id="now">not loaded</pre>
+<script>
+const $ = (id) => document.getElementById(id);
+// Every number on the form. The HAND ones show only what was set by hand (blank = the game's own number, shown greyed).
+const NUMS = ['burst', 'max', 'min', 'finishBy', 'target', 'lead', 'boost', 'maxPlayers', 'perIp'], HAND = ['maxPlayers', 'perIp'];
+let names = [];
+try { $('key').value = localStorage.getItem('admin-key') || ''; } catch (e) {}
+const local = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
+// a relative address, so this page works at the root and under mann.cool/leave/ alike
+async function call(body) {
+  $('msg').textContent = '';
+  try { localStorage.setItem('admin-key', $('key').value); } catch (e) {}
+  const r = await fetch('api/admin', { method: body ? 'POST' : 'GET', headers: { authorization: 'Bearer ' + $('key').value, 'content-type': 'application/json' }, body: body ? JSON.stringify(body) : undefined });
+  if (!r.ok) { $('msg').textContent = r.status === 401 ? 'wrong key (or no key has been set on the server)' : 'failed: ' + r.status; return null; }
+  return r.json();
+}
+function show(d, fill) {
+  if (!d) return;
+  const c = d.control;
+  names = d.giants.map((g) => g.name);
+  if (fill) {
+    $('men').innerHTML = names.map((n, i) => `<fieldset><legend>${n}</legend>
+      <label>Status <select id="state${i}"><option value="play">Still in play: his clock is running</option><option value="in">Elected: frozen, "too late"</option><option value="out">Out in real life: supercharge everyone's tools</option></select></label>
+      <label>Deadline (your local time) <input id="deadline${i}" type="datetime-local"></label>
+      <label>Fixed dig strength (blank = let the game pace itself) <input id="fixed${i}" type="number" step="any"></label></fieldset>`).join('');
+    names.forEach((n, i) => { $('state' + i).value = c.state[i]; $('deadline' + i).value = local(c.deadline[i]); $('fixed' + i).value = c.fixed[i] ?? ''; });
+    for (const k of NUMS) $(k).value = HAND.includes(k) ? d.setByHand[k] ?? '' : c[k];
+    for (const k of HAND) $(k).placeholder = d.defaults[k];
+    $('notice').value = c.notice;
+    $('form').hidden = $('levers').hidden = false;
+    loaded = read();
+  }
+  $('now').textContent = d.giants.map((g, i) => `${g.name}: ${(g.progress * 100).toFixed(2)}% dug, ${g.active ? 'active' : g.done ? 'dug out' : 'closed'}\n  ${(d.ahead[i] * 100).toFixed(2)}% ${d.ahead[i] < 0 ? 'behind' : 'ahead of'} schedule, about ${d.diggers[i].toFixed(1)} digging\n  needs ${d.needPerSec[i].toFixed(4)} m3/s to finish on time; a crowd of shovels may take ${d.speed[i].toFixed(4)} m3/s right now\n  one bite: shovel x${d.shovelMul[i].toPrecision(3)} of its normal depth, top machine x${d.topMul[i].toPrecision(3)}`).join('\n')
+    + `\n\n${d.online} online in ${d.rooms} room(s); room for ${c.maxPlayers}, ${c.perIp} per network address per room\nmounds open: ${d.moundsOpen} (${d.waves} opened so far)`
+    + `\n${d.tot.toLocaleString()} m3 dug by everyone, ever; ${d.calls.toLocaleString()} calls to Congress logged`
+    + (d.flushedAt ? `\nlast "save everyone now": ${new Date(d.flushedAt).toLocaleTimeString()}` : '');
+}
+$('load').onclick = async () => show(await call(), true);
+let loaded = null;
+const read = () => {
+  const num = (id) => ($(id).value === '' ? null : Number($(id).value));
+  const v = { state: names.map((n, i) => $('state' + i).value), deadline: names.map((n, i) => new Date($('deadline' + i).value).getTime()), fixed: names.map((n, i) => num('fixed' + i)), notice: $('notice').value };
+  for (const k of NUMS) v[k] = num(k);
+  return v;
+};
+// Only what you changed is sent, so everything you leave alone keeps following the game's own settings.
+$('form').onsubmit = async (e) => {
+  e.preventDefault();
+  const v = read(), body = {};
+  for (const k of ['state', 'fixed']) if (JSON.stringify(v[k]) !== JSON.stringify(loaded[k])) body[k] = v[k];
+  if (JSON.stringify(v.deadline) !== JSON.stringify(loaded.deadline)) body.deadline = v.deadline.map((x, i) => (x === loaded.deadline[i] ? 'keep' : x));   // an untouched date keeps following the game's own
+  for (const k of [...NUMS, 'notice']) if (v[k] !== loaded[k]) body[k] = v[k];
+  if (!Object.keys(body).length) { $('msg').textContent = 'nothing changed'; return; }
+  show(await call(body), true);
+  if (!$('msg').textContent) $('msg').textContent = 'saved';
+};
+$('flush').onclick = async () => {
+  show(await call({ flush: true }), false);
+  if (!$('msg').textContent) $('msg').textContent = 'every room is saving its players: give it three seconds, then deploy';
+};
+$('setCounters').onclick = async () => {
+  const body = {};
+  for (const k of ['tot', 'calls']) if ($(k).value !== '') body[k] = Number($(k).value);
+  if (!Object.keys(body).length) { $('msg').textContent = 'nothing to set'; return; }
+  show(await call(body), false);
+  $('tot').value = $('calls').value = '';
+  if (!$('msg').textContent) $('msg').textContent = 'counters set';
+};
+setInterval(async () => { if (!$('form').hidden && !document.hidden) show(await call(), false); }, 5000);
+</script>
+</body>
+</html>

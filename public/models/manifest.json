@@ -1,0 +1,1500 @@
+[
+ {
+  "name": "Business_Female_01",
+  "file": "Business_Female_01.glb",
+  "kb": 699,
+  "source_tris": 8966,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.74,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.265
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.316
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.041
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.023
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Business_Female_02",
+  "file": "Business_Female_02.glb",
+  "kb": 696,
+  "source_tris": 8640,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.73,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.267
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.317
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.043
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.022
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Business_Female_03",
+  "file": "Business_Female_03.glb",
+  "kb": 695,
+  "source_tris": 8438,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.75,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.264
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.316
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.04
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.023
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Business_Male_01",
+  "file": "Business_Male_01.glb",
+  "kb": 674,
+  "source_tris": 7435,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.81,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.2
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.24
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Business_Male_02",
+  "file": "Business_Male_02.glb",
+  "kb": 673,
+  "source_tris": 7448,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.82,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.196
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": [
+   "6 UVs wrapped"
+  ]
+ },
+ {
+  "name": "Business_Male_03",
+  "file": "Business_Male_03.glb",
+  "kb": 677,
+  "source_tris": 7810,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.82,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.197
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Business_Male_05",
+  "file": "Business_Male_05.glb",
+  "kb": 667,
+  "source_tris": 7164,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.8,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.201
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.24
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Chef_Female_01",
+  "file": "Chef_Female_01.glb",
+  "kb": 680,
+  "source_tris": 7460,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.73,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.266
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.317
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.043
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.022
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Construction_Female_01",
+  "file": "Construction_Female_01.glb",
+  "kb": 678,
+  "source_tris": 8662,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.77,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.259
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.315
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.037
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.025
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Construction_Male_01",
+  "file": "Construction_Male_01.glb",
+  "kb": 699,
+  "source_tris": 10260,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.84,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.192
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.238
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Delivery_Male_01",
+  "file": "Delivery_Male_01.glb",
+  "kb": 679,
+  "source_tris": 6800,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.82,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.198
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Female_Adult_01",
+  "file": "Female_Adult_01.glb",
+  "kb": 696,
+  "source_tris": 8732,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.74,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.265
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.316
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.041
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.023
+   }
+  },
+  "notes": [
+   "6 UVs wrapped"
+  ]
+ },
+ {
+  "name": "Female_Adult_02",
+  "file": "Female_Adult_02.glb",
+  "kb": 678,
+  "source_tris": 8940,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.73,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.266
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.317
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.043
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.022
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Female_Adult_04",
+  "file": "Female_Adult_04.glb",
+  "kb": 704,
+  "source_tris": 9284,
+  "tris": 1198,
+  "bones": 23,
+  "height_m": 1.76,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.26
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.316
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.038
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.025
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Female_Adult_06",
+  "file": "Female_Adult_06.glb",
+  "kb": 684,
+  "source_tris": 6992,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.74,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.265
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.316
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.042
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.023
+   }
+  },
+  "notes": [
+   "4 UVs wrapped"
+  ]
+ },
+ {
+  "name": "Female_Adult_09",
+  "file": "Female_Adult_09.glb",
+  "kb": 693,
+  "source_tris": 9032,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.74,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.265
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.316
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.041
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.023
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Female_Adult_12",
+  "file": "Female_Adult_12.glb",
+  "kb": 693,
+  "source_tris": 8774,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.72,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.268
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.317
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.044
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.022
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Female_Adult_15",
+  "file": "Female_Adult_15.glb",
+  "kb": 702,
+  "source_tris": 9832,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.74,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.265
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.316
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.042
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.023
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Female_Child_01",
+  "file": "Female_Child_01.glb",
+  "kb": 674,
+  "source_tris": 7102,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.43,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.201
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.245
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.021
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.08
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.005
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Gardener_Male_01",
+  "file": "Gardener_Male_01.glb",
+  "kb": 676,
+  "source_tris": 7470,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.81,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.198
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Male_Adult_01",
+  "file": "Male_Adult_01.glb",
+  "kb": 681,
+  "source_tris": 7440,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.82,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.196
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Male_Adult_02",
+  "file": "Male_Adult_02.glb",
+  "kb": 689,
+  "source_tris": 7312,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.82,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.196
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": [
+   "8 UVs wrapped"
+  ]
+ },
+ {
+  "name": "Male_Adult_03",
+  "file": "Male_Adult_03.glb",
+  "kb": 675,
+  "source_tris": 7200,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.8,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.2
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.24
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Male_Adult_05",
+  "file": "Male_Adult_05.glb",
+  "kb": 680,
+  "source_tris": 7836,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.81,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.198
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Male_Adult_08",
+  "file": "Male_Adult_08.glb",
+  "kb": 677,
+  "source_tris": 7364,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.82,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.196
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Male_Adult_10",
+  "file": "Male_Adult_10.glb",
+  "kb": 675,
+  "source_tris": 6732,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.83,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.195
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Male_Adult_12",
+  "file": "Male_Adult_12.glb",
+  "kb": 669,
+  "source_tris": 6722,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.8,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.2
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.24
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Male_Adult_15",
+  "file": "Male_Adult_15.glb",
+  "kb": 677,
+  "source_tris": 7292,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.82,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.197
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Male_Child_01",
+  "file": "Male_Child_01.glb",
+  "kb": 674,
+  "source_tris": 6660,
+  "tris": 1199,
+  "bones": 23,
+  "height_m": 1.43,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.156
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.189
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.068
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Medical_Female_01",
+  "file": "Medical_Female_01.glb",
+  "kb": 695,
+  "source_tris": 8328,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.74,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.265
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.316
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.041
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.023
+   }
+  },
+  "notes": []
+ },
+ {
+  "name": "Medical_Male_02",
+  "file": "Medical_Male_02.glb",
+  "kb": 696,
+  "source_tris": 7514,
+  "tris": 1200,
+  "bones": 23,
+  "height_m": 1.83,
+  "clips": {
+   "idle": {
+    "frames": 351,
+    "drift_m": 0.0
+   },
+   "walk": {
+    "frames": 33,
+    "drift_m": 1.5
+   },
+   "run": {
+    "frames": 24,
+    "drift_m": 2.24
+   },
+   "cheer": {
+    "frames": 740,
+    "drift_m": 0.0
+   },
+   "dig": {
+    "frames": 49,
+    "reach_miss_m": 0.195
+   },
+   "swing": {
+    "frames": 37,
+    "reach_miss_m": 0.239
+   },
+   "jackhammer": {
+    "frames": 7,
+    "reach_miss_m": 0.0
+   },
+   "push": {
+    "frames": 33,
+    "reach_miss_m": 0.0
+   },
+   "drive": {
+    "frames": 61,
+    "reach_miss_m": 0.0
+   }
+  },
+  "notes": [
+   "6 UVs wrapped"
+  ]
+ }
+]

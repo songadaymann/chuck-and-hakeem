@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Player model test</title>
+<style>
+  html, body { margin: 0; height: 100%; background: #111; color: #ddd; font: 13px/1.4 ui-monospace, Menlo, monospace; }
+  #wrap { position: fixed; inset: 0; display: flex; align-items: center; justify-content: center; }
+  canvas { width: 100%; height: 100%; object-fit: contain; image-rendering: pixelated; background: #000; }
+  #ui { position: fixed; left: 8px; top: 8px; right: 8px; display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+  button { font: inherit; background: #222; color: #ddd; border: 1px solid #555; padding: 4px 8px; cursor: pointer; }
+  button.on { background: #ddd; color: #111; }
+  #info { position: fixed; left: 8px; bottom: 8px; white-space: pre; text-shadow: 0 1px 0 #000; }
+</style>
+<script type="importmap">
+{ "imports": {
+  "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js",
+  "three/addons/": "https://cdn.jsdelivr.net/npm/three@0.160.0/examples/jsm/"
+} }
+</script>
+</head>
+<body>
+<div id="wrap"><canvas id="c"></canvas></div>
+<div id="ui"></div>
+<div id="info"></div>
+<script type="module">
+import * as THREE from 'three';
+import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
+import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
+
+const canvas = document.getElementById('c');
+const renderer = new THREE.WebGLRenderer({ canvas, antialias: false });
+const scene = new THREE.Scene();
+scene.background = new THREE.Color(0x6f8fb0);
+scene.fog = new THREE.Fog(0x6f8fb0, 8, 30);
+const camera = new THREE.PerspectiveCamera(45, 4 / 3, 0.1, 100);
+camera.position.set(0, 1.5, 7);
+const controls = new OrbitControls(camera, canvas);
+controls.target.set(0, 0.9, 0);
+scene.add(new THREE.HemisphereLight(0xffffff, 0x556644, 1.6));
+const sun = new THREE.DirectionalLight(0xffffff, 1.4);
+sun.position.set(3, 5, 4);
+scene.add(sun);
+
+// checker ground so vertex snapping and texture swim are visible
+const g = document.createElement('canvas'); g.width = g.height = 32;
+const gx = g.getContext('2d');
+for (let y = 0; y < 2; y++) for (let x = 0; x < 2; x++) { gx.fillStyle = (x + y) % 2 ? '#5b4a33' : '#6b5a3f'; gx.fillRect(x * 16, y * 16, 16, 16); }
+const gt = new THREE.CanvasTexture(g); gt.wrapS = gt.wrapT = THREE.RepeatWrapping; gt.repeat.set(20, 20);
+gt.magFilter = gt.minFilter = THREE.NearestFilter; gt.colorSpace = THREE.SRGBColorSpace;
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(40, 40, 40, 40), new THREE.MeshLambertMaterial({ map: gt }));
+ground.rotation.x = -Math.PI / 2; scene.add(ground);
+
+const state = { ps1: true, clip: 'walk', snap: { value: new THREE.Vector2(160, 120) } };
+const materials = [ground.material];
+function ps1ify(mat) {
+  mat.onBeforeCompile = (sh) => {
+    sh.uniforms.uSnap = state.snap;
+    sh.vertexShader = 'uniform vec2 uSnap;\n' + sh.vertexShader.replace('#include <project_vertex>',
+      '#include <project_vertex>\n if (uSnap.x > 0.0) { vec2 p = gl_Position.xy / gl_Position.w; p = floor(p * uSnap + 0.5) / uSnap; gl_Position.xy = p * gl_Position.w; }');
+  };
+  mat.needsUpdate = true;
+}
+ps1ify(ground.material);
+
+// Simple stand-in tools. Each is built with its handle end at the origin and its working end along +Y,
+// which is how the Tool bone is animated.
+const propMat = (c) => { const m = new THREE.MeshLambertMaterial({ color: c }); ps1ify(m); return m; };
+const wood = propMat(0x8a6238), steel = propMat(0x8d9399), yellow = propMat(0xd9a520), dark = propMat(0x2b2b2b);
+function box(w, h, d, x, y, z, mat) { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), mat); m.position.set(x, y, z); return m; }
+function makeProps() {
+  const P = {};
+  const g = (...kids) => { const o = new THREE.Group(); o.add(...kids); return o; };
+  P.shovel = g(box(0.04, 1.1, 0.04, 0, 0.55, 0, wood), box(0.22, 0.3, 0.025, 0, 1.24, 0, steel), box(0.14, 0.04, 0.04, 0, 0.0, 0, wood));
+  P.pick = g(box(0.045, 0.9, 0.045, 0, 0.45, 0, wood), box(0.05, 0.06, 0.62, 0, 0.88, 0, steel));
+  P.jack = g(box(0.46, 0.04, 0.04, 0, 0, 0, dark), box(0.14, 0.5, 0.14, 0, 0.3, 0, yellow), box(0.035, 0.45, 0.035, 0, 0.78, 0, steel));
+  P.trencher = g(box(0.54, 0.035, 0.035, 0, 0, 0, dark), box(0.035, 0.75, 0.035, -0.2, 0.37, 0, dark), box(0.035, 0.75, 0.035, 0.2, 0.37, 0, dark),
+                 box(0.5, 0.55, 0.4, 0, 0.95, 0.05, yellow), box(0.6, 0.3, 0.3, 0, 1.0, -0.25, dark));
+  P.wheel = g(new THREE.Mesh(new THREE.TorusGeometry(0.19, 0.02, 4, 10), dark), box(0.38, 0.03, 0.03, 0, 0, 0, dark));
+  P.wheel.children[0].rotation.x = Math.PI / 2;
+  return P;
+}
+const PROP_FOR = { dig: 'shovel', swing: 'pick', jackhammer: 'jack', push: 'trencher', drive: 'wheel' };
+// Real tool models replace the box stand-ins when the files exist.
+const TOOL_FILES = { shovel: 'shovel', pick: 'pickaxe', jack: 'jackhammer', trencher: 'trencher' };
+const toolModels = {};
+await Promise.all(Object.entries(TOOL_FILES).map(async ([k, f]) => {
+  try {
+    const g = await new GLTFLoader().loadAsync('models/tools/' + f + '.glb');
+    g.scene.traverse((o) => {
+      if (!o.isMesh) return;
+      const tex = o.material.map; if (tex) { tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true; }
+      const mat = new THREE.MeshLambertMaterial({ map: tex }); ps1ify(mat); o.material = mat; o.frustumCulled = false;
+    });
+    toolModels[k] = g.scene;
+  } catch (e) { console.warn('no model for', f); }
+}));
+const people = [];
+const manifest = await (await fetch('models/manifest.json')).json();
+const loader = new GLTFLoader();
+const spacing = 1.1;
+await Promise.all(manifest.map(async (m, i) => {
+  const gltf = await loader.loadAsync('models/' + m.file);
+  const root = gltf.scene;
+  root.position.x = (i - (manifest.length - 1) / 2) * spacing;
+  root.traverse((o) => {
+    if (!o.isMesh) return;
+    o.frustumCulled = false;
+    const tex = o.material.map;
+    tex.magFilter = tex.minFilter = THREE.NearestFilter; tex.generateMipmaps = false; tex.needsUpdate = true;
+    const mat = new THREE.MeshLambertMaterial({ map: tex, alphaTest: 0.5, side: THREE.DoubleSide });
+    ps1ify(mat); o.material = mat; materials.push(mat);
+  });
+  scene.add(root);
+  root.updateMatrixWorld(true);
+  const toolBone = root.getObjectByName('Tool');
+  const props = makeProps();
+  for (const k in toolModels) props[k] = toolModels[k].clone();
+  if (toolBone) {
+    const ws = new THREE.Vector3(); toolBone.getWorldScale(ws);
+    for (const k in props) { props[k].scale.setScalar(m.height_m / 1.8 / ws.x); props[k].visible = false; toolBone.add(props[k]); }
+  }
+  const mixer = new THREE.AnimationMixer(root);
+  const actions = {};
+  for (const c of gltf.animations) actions[c.name] = mixer.clipAction(c);
+  people.push({ m, root, mixer, actions, props, current: null });
+}));
+
+function play(name) {
+  state.clip = name;
+  for (const p of people) {
+    const a = p.actions[name]; if (!a) continue;
+    if (p.current && p.current !== a) p.current.fadeOut(0.15);
+    a.reset().fadeIn(0.15).play(); p.current = a;
+    const want = PROP_FOR[name] || 'shovel';
+    for (const k in p.props) p.props[k].visible = k === want;
+  }
+  document.querySelectorAll('button[data-clip]').forEach((b) => b.classList.toggle('on', b.dataset.clip === name));
+}
+
+const ui = document.getElementById('ui');
+const clipNames = [...new Set(people.flatMap((p) => Object.keys(p.actions)))];
+for (const n of clipNames) {
+  const b = document.createElement('button'); b.textContent = n; b.dataset.clip = n; b.onclick = () => play(n); ui.append(b);
+}
+const tb = document.createElement('button'); tb.id = 'ps1';
+tb.onclick = () => { state.ps1 = !state.ps1; resize(); }; ui.append(tb);
+
+function resize() {
+  const w = innerWidth, h = innerHeight;
+  const rw = state.ps1 ? 320 : w * devicePixelRatio, rh = state.ps1 ? Math.round(320 * h / w) : h * devicePixelRatio;
+  renderer.setSize(rw, rh, false);
+  camera.aspect = w / h; camera.updateProjectionMatrix();
+  state.snap.value.set(state.ps1 ? rw / 2 : 0, state.ps1 ? rh / 2 : 0);
+  tb.textContent = state.ps1 ? 'PS1 look: on' : 'PS1 look: off'; tb.classList.toggle('on', state.ps1);
+}
+addEventListener('resize', resize); resize();
+play(new URLSearchParams(location.search).get('clip') || 'walk');
+
+document.getElementById('info').textContent = manifest.map((m) => `${m.name}  ${m.tris} tris (from ${m.source_tris})  ${m.kb} KB`).join('\n');
+window.__test = { people, play, state, resize, camera, controls };
+
+const clock = new THREE.Clock();
+let acc = 0;
+renderer.setAnimationLoop(() => {
+  const dt = clock.getDelta();
+  acc += dt;
+  const stepT = state.ps1 ? 1 / 15 : 0;       // stepped animation in PS1 mode
+  if (acc >= stepT) { for (const p of people) p.mixer.update(acc); acc = 0; }
+  controls.update();
+  renderer.render(scene, camera);
+});
+</script>
+</body>
+</html>
