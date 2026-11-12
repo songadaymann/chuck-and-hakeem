@@ -58,7 +58,7 @@ export const CFG = {
   // finish just before its deadline, given how much digging has been arriving lately (averaged over tau seconds).
   // burst = how many times faster than that the pile may go while people are actually playing; min/max bound the rate.
   // All of these can be changed live from /admin.html. superRate applies when a man is marked "out in real life".
-  pace: { min: 1e-7, max: 4, burst: 20, target: 1.5, lead: 0.1, floor: 0.1, boost: 1.28, finishBy: 0.9, tuneSec: 5, superRate: 25, solo: 1 },
+  pace: { min: 1e-7, max: 4, burst: 4, target: 3, lead: 0.03, floor: 0.1, boost: 1.28, finishBy: 0.97, tuneSec: 5, superRate: 25, solo: 1 },
   // Shared-world server settings (see worker/). Costs scale with rooms kept awake and messages sent, so both are capped here.
   net: { roomSize: 80, maxPlayers: 4000, perIp: 40, sendMs: 500, syncMs: 1000, shown: 24, shownTouch: 12, saveEverySec: 60, idleKickSec: 300 },
   // Names are built from these lists, never typed, so there is nothing to moderate.
