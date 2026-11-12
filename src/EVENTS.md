@@ -30,6 +30,7 @@ not throw. Positions are world metres (+Y up). The Capitol's west front faces +Z
 | `dirtBomb` | `id, i, lobby, start, hit, end, late` | a lobby is airdropping dirt onto pile `i` (times are this browser's `Date.now()`; `late`: we joined after the warning). Nobody digs from `start` to `end` (see `game.storming()`) |
 | `regrow` | `giant, field` | a dirt bomb landed: the pile is swelling back up to the server's new copy |
 | `online` | `count, room, back` | connected to the shared dig (`back`: this is a reconnect) |
+| `newBuild` | — | a newer build is being served than this tab is running (update.js has put up its reload banner) |
 | `join` / `leave` | `sid, name` | someone entered / left your room |
 | `remoteDig` | `x, y, z, tier, tool, near` | another player's bite landed (`near`: they are drawn with a full body) |
 | `remoteTool` | `remote, sid, name, tier, tool` | another player in your room earned a tool |

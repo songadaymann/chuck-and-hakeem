@@ -89,6 +89,7 @@ export default {
     if (res.ok || res.status === 304) {
       if (path.startsWith('/assets/')) out.headers.set('Cache-Control', 'public, max-age=31536000, immutable');
       else if (path.startsWith('/models/') || path.startsWith('/data/') || path.startsWith('/audio/')) out.headers.set('Cache-Control', 'public, max-age=86400');
+      else if (path === '/version.json') out.headers.set('Cache-Control', 'no-store');   // open tabs ask it whether a deploy has happened
     }
     return out;
   },

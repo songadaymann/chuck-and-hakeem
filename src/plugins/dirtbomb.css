@@ -9,12 +9,14 @@ body.dbflash #dbhaze { background: #fff8e6; opacity: 0.9; transition: none; anim
 @keyframes dbdrift { to { background-position: 0 0, 240px 120px; } }
 
 #dbstrip { position: fixed; left: 0; right: 0; top: 0; z-index: 4; pointer-events: none; display: flex; justify-content: center; gap: 18px; align-items: center;
-  padding: 7px 12px; transform: translateY(-110%); transition: transform 0.35s steps(4);
+  /* hidden: pushed up past the top of the screen from wherever it sits (it sits lower under mann.cool's bar), and
+     invisible once there, so no edge of it can lie over the line with the diggers count */
+  padding: 7px 12px; transform: translateY(calc(-100% - 80px)); visibility: hidden; transition: transform 0.35s steps(4), visibility 0s 0.35s;
   background: repeating-linear-gradient(135deg, #ffc21a 0 18px, #14110d 18px 36px); border-bottom: 4px solid var(--db, #c33);
   font: 22px/1 "Rubik Dirt", Impact, sans-serif; }
 #dbstrip b, #dbstrip i { font-style: normal; font-weight: 400; background: #14110d; color: #ffc21a; padding: 4px 10px; border: 2px solid #ffc21a; }
 #dbstrip i { color: #fff; background: var(--db, #c33); animation: dbblink 0.5s steps(1) infinite; }
-body.dbstorm #dbstrip { transform: none; }
+body.dbstorm #dbstrip { transform: none; visibility: visible; transition: transform 0.35s steps(4), visibility 0s; }
 @keyframes dbblink { 50% { opacity: 0.35; } }
 
 #pops span.dbsplat { font-size: 64px; color: #ffc21a; text-shadow: 4px 4px 0 #000; animation-duration: 1.4s; }
