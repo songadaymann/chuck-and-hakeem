@@ -1,0 +1,47 @@
+name: Uptime
+
+# Every 10 minutes: is the live game answering, and has the spending guard tripped (CFG.cost)? A failed run is the
+# alarm: GitHub emails the person who last changed the schedule below (Settings > Notifications > Actions, "failed
+# workflows only"). Scheduled runs can start a few minutes late, so a blip shorter than that may go unseen; a deploy
+# blip does not fail it, because each check is tried three times over about a minute.
+on:
+  schedule:
+    - cron: '*/10 * * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: uptime
+  cancel-in-progress: false
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    env:
+      SITE: https://mann.cool/leave
+    steps:
+      - name: The game's page loads
+        run: |
+          for i in 1 2 3; do
+            code=$(curl -sS -o page.html -w '%{http_code}' --max-time 20 "$SITE/" || echo 000)
+            if [ "$code" = 200 ] && grep -q '<script' page.html; then echo "page: $code"; exit 0; fi
+            echo "try $i: page answered $code"; sleep 25
+          done
+          echo "::error title=Game page down::$SITE/ did not load after three tries (last answer $code)"; exit 1
+
+      - name: The shared dig answers, and spending is within budget
+        run: |
+          for i in 1 2 3; do
+            if curl -sS --fail --max-time 20 "$SITE/api/status" -o status.json && jq -e '.giants | length == 2' status.json > /dev/null; then
+              jq -c '{online, rooms, limited, giants: [.giants[] | {name, progress, state}]}' status.json
+              limited=$(jq -r '.limited // 0' status.json)
+              if [ "$limited" = 2 ]; then echo "::error title=Spending guard: shared dig closed::Estimated spend is past twice today's budget; everyone is on practice piles until 00:00 UTC. Check /admin.html."; exit 1; fi
+              if [ "$limited" = 1 ]; then echo "::error title=Spending guard: over budget::Estimated spend is past today's budget; nobody new is being seated until 00:00 UTC. Check /admin.html."; exit 1; fi
+              exit 0
+            fi
+            echo "try $i: status did not answer properly"; sleep 25
+          done
+          echo "::error title=Shared dig down::$SITE/api/status did not answer with the game's status after three tries"; exit 1

@@ -2,7 +2,8 @@ import { DurableObject } from 'cloudflare:workers';
 import { CFG, moundSpots, wavesWanted, digMul, lobbyHeat, lobbyAt } from '../shared/config.js';
 import { DirtGrid } from '../shared/grid.js';
 
-const N = CFG.net, P = CFG.pace, L = CFG.lobby, D = CFG.dirt, B = CFG.bomb;
+const N = CFG.net, P = CFG.pace, L = CFG.lobby, D = CFG.dirt, B = CFG.bomb, C = CFG.cost;
+const dayOf = (ms) => new Date(ms).toISOString().slice(0, 10);   // the UTC day the spending guard counts in
 const STATES = ['play', 'in', 'out'];
 // Folding thin rooms after a peak: a room under `under` players that nobody has been sent to for `settleMs` is told to
 // close when fuller rooms have room for all of it and `spare` more. One fold every `everyMs`, so the counts catch up between two.
@@ -27,6 +28,7 @@ export class World extends DurableObject {
     this.over = { state: each(null), deadline: each(null), fixed: each(null) };
     this.since = each(Date.now());   // when each man's current schedule began (pacing aims at a fixed finish time)
     this.rebuild();
+    this.spend = { day: dayOf(Date.now()), usd: 0 };   // today's estimated bill (CFG.cost)
     this.base = each(0);             // ...and how far out he already was at that moment
     // q: real cubic metres one digger-second is worth on each pile right now. diggers: how many people were at it lately.
     this.q = each(0); this.diggers = each(0); this.work = each(0); this.real = each(0);
@@ -45,7 +47,7 @@ export class World extends DurableObject {
     this.flush = 0; this.foldAt = 0;
     this.dirty = false; this.alarmSet = false;
     ctx.blockConcurrencyWhile(async () => {
-      const saved = await ctx.storage.get(['g0', 'g1', 't0', 't1', 'm2', 'over', 'since', 'base', 'for', 'left', 'tot', 'calls', 'bomb']);
+      const saved = await ctx.storage.get(['g0', 'g1', 't0', 't1', 'm2', 'over', 'since', 'base', 'for', 'left', 'tot', 'calls', 'bomb', 'spend']);
       this.grids.forEach((g, i) => {
         const t = saved.get('t' + i), cm = saved.get('g' + i);
         if (t) {   // thickness in metres, as floats
@@ -68,6 +70,8 @@ export class World extends DurableObject {
         if (Array.isArray(bm.gen)) bm.gen.forEach((v, i) => { if (i < this.gen.length && Number.isInteger(v)) this.gen[i] = v; });
         this.bombs = fin(bm.bombs, 0, 1e9) ?? 0; this.lastBomb = fin(bm.last, 0, 1e14) ?? 0;
       }
+      const sp = saved.get('spend');
+      if (sp && sp.day === this.spend.day) this.spend.usd = fin(sp.usd, 0, 1e9) ?? 0;
       const s = saved.get('since');
       if (Array.isArray(s)) s.forEach((v, i) => { if (i < this.since.length && Number.isFinite(v)) this.since[i] = v; });
       const b = saved.get('base');
@@ -96,7 +100,8 @@ export class World extends DurableObject {
   // Which room should a new player join? Fill the fullest room that still has space, so as few rooms as possible stay awake.
   assign() {
     const now = Date.now();
-    if (this.online() >= this.ctl.maxPlayers) return null;
+    if (this.online() >= this.ctl.maxPlayers || this.limited(now) > 0) return null;
+    this.charge(now, C.join);
     let best = null;
     for (const [name, r] of this.rooms) if (r.count < N.roomSize && now >= r.shut && (!best || r.count > this.rooms.get(best).count)) best = name;
     if (!best) { let i = 1; while (this.rooms.has('r' + i)) i++; best = 'r' + i; this.rooms.set(best, { count: 0, seen: now, at: 0, born: now, shut: 0 }); }
@@ -112,6 +117,7 @@ export class World extends DurableObject {
     const held = !!r && now - r.at < 3000;
     if (count <= 0 && !held) { this.rooms.delete(room); return null; }
     if (!r) this.rooms.set(room, r = { count: 0, seen: now, at: 0, born: now, shut: 0 });
+    else this.charge(now, clamp((now - r.seen) / 1000, 0, 5) * (C.roomSec + Math.max(0, count) * C.playerSec));
     r.count = held ? Math.max(count, r.count) : count; r.seen = now; r.heard = true;
     return r;
   }
@@ -123,6 +129,19 @@ export class World extends DurableObject {
     if (!r) return;
     r.count = Math.max(0, r.count - 1);
     if (!r.heard && !r.count) this.rooms.delete(room);
+  }
+
+  // ---- the spending guard (CFG.cost). Add an estimated cost to today's running total; a new UTC day starts from 0.
+  charge(now, usd) {
+    const day = dayOf(now);
+    if (day !== this.spend.day) this.spend = { day, usd: 0 };
+    this.spend.usd += usd;   // written down with the next save of the piles (no extra writes just for this)
+  }
+  // 0 = within budget; 1 = over it (nobody new is seated); 2 = far over it (every room closes too). Until the next UTC day.
+  limited(now) {
+    const per = this.ctl.perDay;
+    if (!(per > 0) || dayOf(now) !== this.spend.day) return 0;
+    return this.spend.usd >= per * C.stopMul ? 2 : this.spend.usd >= per ? 1 : 0;
   }
 
   // After the peak: should this thin room close, so its people land in fuller ones? Only when we are sure. Never just
@@ -186,6 +205,7 @@ export class World extends DurableObject {
     if (dt >= P.tuneSec) {
       this.lastTune = now;
       this.grids.forEach((g, i) => { this.diggers[i] = this.work[i] / dt; this.work[i] = this.real[i] = 0; });
+      if (this.rooms.size) this.charge(now, Math.min(dt, 60) * C.worldSec);
     } else if (!force) return;
     this.grids.forEach((g, i) => { this.q[i] = Math.min(this.speed(i, now) / Math.max(1, this.diggers[i]), this.most(i)); });
   }
@@ -235,7 +255,7 @@ export class World extends DurableObject {
     });
     // mound health to one decimal, so that in a crowd (where one hit is a sliver) a hit still shows; never 0 while it stands
     return { tick: this.tick, epoch: this.epoch, vols, cells, mounds: this.mounds.map((h) => (h > 0 ? Math.max(0.1, Math.round(h * 10) / 10) : 0)), online: this.online(),
-      tot: Math.round(this.tot), dg: this.diggers.map(Math.round), calls: this.calls, perIp: c.perIp, fl: this.flush, fold: !!here && count > 0 && this.fold(room, here, now),
+      tot: Math.round(this.tot), dg: this.diggers.map(Math.round), calls: this.calls, perIp: c.perIp, fl: this.flush, fold: !!here && count > 0 && (this.limited(now) > 1 || this.fold(room, here, now)),
       gen: this.gen, bombs: this.bombs, bomb: this.bombNews(now),
       rate: this.grids.map((g, i) => this.mul(i, 0)), q: this.grids.map((g, i) => (this.auto(i) ? sig(this.q[i]) : 0)), au: this.grids.map((g, i) => (this.auto(i) ? 1 : 0)), pm: [c.min, c.max, c.boost], dn: this.grids.map((g) => g.done), st: c.state, dl: c.deadline, notice: c.notice };
   }
@@ -323,7 +343,7 @@ export class World extends DurableObject {
     this.dirty = false;
     try {
       const put = { m2: { hp: this.mounds, waves: this.waves, quiet: this.quiet }, left: this.grids.map((g) => g.left), tot: this.tot, calls: this.calls,
-        bomb: { gen: this.gen, bombs: this.bombs, last: this.lastBomb } };
+        bomb: { gen: this.gen, bombs: this.bombs, last: this.lastBomb }, spend: this.spend };
       this.grids.forEach((g, i) => { put['t' + i] = Float32Array.from(g.h, (v, k) => v - g.floor[k]).buffer; });
       await this.ctx.storage.put(put);
     } catch (e) {
@@ -338,7 +358,8 @@ export class World extends DurableObject {
     this.ctl = { state: o.state.map((s) => s || 'play'), deadline: CFG.giants.map((g, i) => o.deadline[i] ?? Date.parse(g.deadline)), fixed: o.fixed.slice(),
       min: o.min ?? P.min, max: o.max ?? P.max, burst: o.burst ?? P.burst, target: o.target ?? P.target, lead: o.lead ?? P.lead, boost: o.boost ?? P.boost, finishBy: o.finishBy ?? P.finishBy, bombAt: o.bombAt ?? B.at, notice: o.notice || '',
       // the two crowd limits: seats in the whole game, and connections one network address may hold in one room
-      maxPlayers: Math.floor(o.maxPlayers ?? N.maxPlayers), perIp: Math.floor(o.perIp ?? N.perIp) };
+      maxPlayers: Math.floor(o.maxPlayers ?? N.maxPlayers), perIp: Math.floor(o.perIp ?? N.perIp),
+      perDay: o.perDay ?? C.perDay };   // the spending guard's daily budget in dollars (0 = none)
     if (this.ctl.min > this.ctl.max) this.ctl.min = this.ctl.max;
   }
 
@@ -355,7 +376,7 @@ export class World extends DurableObject {
       }
       if (Array.isArray(p.fixed) && i in p.fixed) o.fixed[i] = fin(p.fixed[i], 1e-9, 1000);   // anything else clears it
     });
-    for (const [k, lo, hi] of [['min', 1e-9, 1000], ['max', 1e-9, 1000], ['burst', 1, 10000], ['target', 0, 100000], ['lead', 0.001, 1], ['boost', 1, 3], ['finishBy', 0.05, 1], ['bombAt', 0, 1], ['maxPlayers', 0, 100000], ['perIp', 1, 1000]]) {
+    for (const [k, lo, hi] of [['min', 1e-9, 1000], ['max', 1e-9, 1000], ['burst', 1, 10000], ['target', 0, 100000], ['lead', 0.001, 1], ['boost', 1, 3], ['finishBy', 0.05, 1], ['bombAt', 0, 1], ['maxPlayers', 0, 100000], ['perIp', 1, 1000], ['perDay', 0, 100000]]) {
       if (p[k] === null) delete o[k]; else if (fin(p[k], lo, hi) !== null) o[k] = p[k];
     }
     if (typeof p.notice === 'string') o.notice = p.notice.replace(/[\u0000-\u001f<>]/g, ' ').slice(0, 140);
@@ -380,7 +401,8 @@ export class World extends DurableObject {
     const now = Date.now();
     return { ...this.status(), control: this.ctl, setByHand: this.over, codeDeadline: CFG.giants.map((g) => Date.parse(g.deadline)), flushedAt: this.flush,
       needPerSec: this.grids.map((g, i) => this.need(i, now)), speed: this.grids.map((g, i) => this.speed(i, now)), ahead: this.grids.map((g, i) => this.ahead(i, now)), diggers: this.diggers, left: this.grids.map((g, i) => this.rem(i)),
-      shovelMul: this.grids.map((g, i) => this.mul(i, 0)), topMul: this.grids.map((g, i) => this.mul(i, CFG.tools.length - 1)), moundHp: this.mounds, waves: this.waves, defaults: { ...P, bombAt: B.at, maxPlayers: N.maxPlayers, perIp: N.perIp },
+      shovelMul: this.grids.map((g, i) => this.mul(i, 0)), topMul: this.grids.map((g, i) => this.mul(i, CFG.tools.length - 1)), moundHp: this.mounds, waves: this.waves, defaults: { ...P, bombAt: B.at, maxPlayers: N.maxPlayers, perIp: N.perIp, perDay: C.perDay },
+      spend: { day: this.spend.day, usd: this.spend.usd, limited: this.limited(now), stopAt: this.ctl.perDay * C.stopMul },
       bomb: this.bombNews(now), bombs: this.bombs, lastBomb: this.lastBomb, gen: this.gen };
   }
 
@@ -389,6 +411,6 @@ export class World extends DurableObject {
     this.tune(now);   // so the digger counts fall to nothing when everyone has gone home
     return { online: this.online(), rooms: this.rooms.size, tot: Math.round(this.tot), dg: this.diggers.map(Math.round), calls: this.calls,
       giants: this.grids.map((g, i) => ({ name: g.giant.name, progress: +g.progress.toFixed(4), done: g.done, state: this.ctl.state[i], deadline: new Date(this.ctl.deadline[i]).toISOString(), active: this.active(i, now) })),
-      moundsOpen: this.mounds.filter((h) => h > 0).length };
+      moundsOpen: this.mounds.filter((h) => h > 0).length, limited: this.limited(now) };
   }
 }
