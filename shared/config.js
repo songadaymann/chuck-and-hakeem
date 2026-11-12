@@ -75,7 +75,7 @@ export const CFG = {
   // Durable Object requests $0.15/M, duration $12.50/M GB-s at 128 MB, Worker requests $0.30/M. An estimate, not the bill.
   // Past `perDay` dollars nobody new is seated (newcomers dig a practice pile); past `stopMul` x perDay every room is
   // closed as well, until the next UTC day. perDay can be changed live from /admin.html (0 = no limit).
-  cost: { perDay: 10, stopMul: 2, roomSec: 1.7e-6, playerSec: 2e-8, worldSec: 1.6e-6, join: 4e-5 },
+  cost: { perDay: 40, stopMul: 2, roomSec: 1.7e-6, playerSec: 2e-8, worldSec: 1.6e-6, join: 4e-5 },
   // Shared-world server settings (see worker/). Costs scale with rooms kept awake and messages sent, so both are capped here.
   net: { roomSize: 80, maxPlayers: 4000, perIp: 40, sendMs: 500, syncMs: 1000, shown: 24, shownTouch: 12, saveEverySec: 60, idleKickSec: 300 },
   // Names are built from these lists, never typed, so there is nothing to moderate.
