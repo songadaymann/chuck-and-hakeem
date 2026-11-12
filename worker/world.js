@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { CFG, moundSpots, wavesWanted, digMul } from '../shared/config.js';
+import { CFG, moundSpots, wavesWanted, digMul, lobbyHeat, lobbyAt } from '../shared/config.js';
 import { DirtGrid } from '../shared/grid.js';
 
 const N = CFG.net, P = CFG.pace, L = CFG.lobby, D = CFG.dirt, B = CFG.bomb;
@@ -240,10 +240,12 @@ export class World extends DurableObject {
       rate: this.grids.map((g, i) => this.mul(i, 0)), q: this.grids.map((g, i) => (this.auto(i) ? sig(this.q[i]) : 0)), au: this.grids.map((g, i) => (this.auto(i) ? 1 : 0)), pm: [c.min, c.max, c.boost], dn: this.grids.map((g) => g.done), st: c.state, dl: c.deadline, notice: c.notice };
   }
 
-  // The lobbies respond to the danger their men are in: mounds open one at a time as the piles go down.
+  // The lobbies respond to the danger their men are in: mounds open one at a time as the piles go down, and more
+  // of them may be open at once the lower the piles are and the more people are digging (lobbyHeat).
   openWaves(now) {
     if (!this.grids.some((g, i) => this.active(i, now))) return;
     const n = this.mounds.length, prog = this.grids.reduce((s, g) => s + Math.min(1, g.progress / D.doneAt), 0) / this.grids.length;
+    const cap = lobbyAt(lobbyHeat(prog, this.diggers.reduce((x, y) => x + y, 0))).maxOpen;
     let want = wavesWanted(prog);
     if (want - this.waves > 3) this.waves = want - 3;   // never a long queue of them after a big jump
     // ...and the lobbies never stay away for long: quietSec with somebody online and nothing open, and the next one opens
@@ -252,7 +254,7 @@ export class World extends DurableObject {
     this.waveAt = now;
     if (this.mounds.some((h) => h > 0)) this.quiet = 0;
     else if (this.online() > 0 && (this.quiet += dt) > L.quietSec * 1000 && want <= this.waves) want = this.waves + 1;
-    while (this.waves < want && this.mounds.filter((h) => h > 0).length < L.maxOpen) {
+    while (this.waves < want && this.mounds.filter((h) => h > 0).length < cap) {
       let i = this.waves % n, tries = 0;
       while (this.mounds[i] > 0 && tries++ < n) i = (i + 1) % n;
       this.mounds[i] = L.moundHp; this.waves++; this.quiet = 0; this.dirty = true;

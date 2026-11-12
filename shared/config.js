@@ -53,7 +53,11 @@ export const CFG = {
   // tosEvery = at most one terms-of-service pop-up per this many seconds. quietSec = the lobbies never stay away longer than this:
   // with nothing open for that long (and somebody digging), the next mound opens whatever the progress.
   lobby: { moundsEach: 3, moundHp: 300, spawnEvery: 20, maxPerMound: 3, lobbyistHp: 2, speed: 3.2, range: 14, stand: 2.8, cooldown: 4, shotSpeed: 13, dmg: 4, deductibleDigs: 2, tosEvery: 20, quietSec: 180,
-           firstAt: 0.001, openEvery: 0.01, maxOpen: 2, meleeR: 3.4, whack: 0.38, hitMul: 4, perMound: 6 },
+           firstAt: 0.001, openEvery: 0.01, maxOpen: 2, meleeR: 3.4, whack: 0.38, hitMul: 4, perMound: 6,
+           // The lobbies push harder the lower the piles get and the more people are digging. heat (0..1) = pile x (share of
+           // the two piles gone) + crowd x (how busy the dig is: 0 for a lone digger, 1 at crowdFull people, counted in
+           // doublings). At heat 0 the numbers above apply, at heat 1 the ones in `at`, and in between they slide.
+           ramp: { pile: 0.6, crowd: 0.4, crowdFull: 64, at: { maxOpen: 4, spawnEvery: 10, maxPerMound: 5, speed: 4.2, cooldown: 2.8 } } },
   // Pacing. Every dig is multiplied by a rate the server keeps re-tuning so each pile falls at the speed needed to
   // finish just before its deadline, given how much digging has been arriving lately (averaged over tau seconds).
   // burst = how many times faster than that the pile may go while people are actually playing; min/max bound the rate.
@@ -84,6 +88,15 @@ const SPOTS = [[118, 30], [-62, 84], [150, 78], [-118, 30], [62, 84], [-150, 78]
 export function moundSpots() { return SPOTS.map(([x, z], i) => ({ i, lobby: CFG.lobbies[i % CFG.lobbies.length], x, z })); }
 // How many mounds should have opened by the time this much of the two piles (0..1, averaged) is gone.
 export const wavesWanted = (p) => (p < CFG.lobby.firstAt ? 0 : 1 + Math.floor((p - CFG.lobby.firstAt) / CFG.lobby.openEvery));
+// How hard the lobbies are pushing (0..1), from the share of the two piles gone and how many people are digging them.
+export const lobbyHeat = (p, diggers) => { const R = CFG.lobby.ramp; return Math.max(0, Math.min(1, R.pile * Math.max(0, Math.min(1, p)) + R.crowd * Math.log2(Math.max(1, diggers || 0)) / Math.log2(R.crowdFull))); };
+// The lobby numbers that change with heat, at this heat. The two counts are whole numbers.
+export const lobbyAt = (heat) => {
+  const L = CFG.lobby, o = {};
+  for (const k in L.ramp.at) o[k] = L[k] + (L.ramp.at[k] - L[k]) * heat;
+  o.maxOpen = Math.round(o.maxOpen); o.maxPerMound = Math.round(o.maxPerMound);
+  return o;
+};
 export const tierFor = (dug) => { let t = 0; while (t + 1 < CFG.tools.length && dug >= CFG.tools[t + 1].need) t++; return t; };
 export const randomName = () => `${CFG.nameA[Math.floor(Math.random() * CFG.nameA.length)]} ${CFG.nameB[Math.floor(Math.random() * CFG.nameB.length)]} ${10 + Math.floor(Math.random() * 90)}`;
 export const validName = (n) => { const m = /^(\S+) (\S+) (\d\d)$/.exec(n || ''); return !!m && CFG.nameA.includes(m[1]) && CFG.nameB.includes(m[2]); };
