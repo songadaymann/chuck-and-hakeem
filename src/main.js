@@ -6,6 +6,7 @@ import { snap, ps1ify, FONT } from './ps1.js';
 import { model, load } from './assets.js';
 import { buildWorld, worldH } from './world.js';
 import { DirtField } from './dirt.js';
+import { DirtGrid } from '../shared/grid.js';
 import { Player } from './player.js';
 import { Lobby } from './lobby.js';
 import { Hud, pctText } from './hud.js';
@@ -42,6 +43,18 @@ const game = {
   state: CFG.giants.map(() => 'play'), rate: CFG.giants.map(() => CFG.pace.solo), q: [], au: [], pm: [CFG.pace.min, CFG.pace.max, CFG.pace.boost], dn: [], told: [], notice: '',
   // the numbers that grow with the crowd: cubic metres everyone has dug in total, people on each pile right now, calls made to Congress
   tot: 0, dg: [], calls: 0,
+  // the lobbies' dirt bomb in progress, if any: { id, i, lobby, start, hit, end } in this browser's Date.now() (see CFG.bomb);
+  // bombs = how many have been dropped in all. While one is on, nobody digs: everything stops for the dirt storm.
+  bomb: null, bombs: 0,
+  storming() { const b = this.bomb, now = Date.now(); return !!b && now >= b.start && now < b.end; },
+  // practice pile / testing: a bomb that only this browser sees (the dirtbomb add-on runs the show; this does the dirt)
+  fakeBomb(i = 1, lobby = null) {
+    const now = Date.now(), B = CFG.bomb, id = -now;
+    this.bomb = { id, i, lobby: lobby || CFG.lobbies[this.bombs % CFG.lobbies.length].id, start: now, hit: now + B.warnSec * 1000, end: now + B.stormSec * 1000, fake: true };
+    this.bombs++;
+    this.bus.emit('dirtBomb', { ...this.bomb, late: false });
+    setTimeout(() => { const f = this.fields[i]; if (this.bomb?.id !== id) return; const g = new DirtGrid(f.giant, i + 1); g.h.set(f.h); g.refill(f.total * B.most); f.regrow(g.toCm()); this.bus.emit('regrow', { giant: i, field: f }); }, B.warnSec * 1000);
+  },
   out(i) { return this.fields[i].done || !!this.dn[i]; },   // the server has the last word on "done", and keeps it through a dropped connection: dirt never goes back up
   // buried / dug (out in time) / lost (his clock ran out first, or he was elected)
   status(i) { return this.out(i) ? 'dug' : this.state[i] === 'out' ? 'buried' : this.state[i] === 'in' || Date.now() >= this.deadlines[i] ? 'lost' : 'buried'; },
@@ -58,6 +71,13 @@ const game = {
     if (Number.isFinite(m.tot)) this.tot = m.tot;
     if (Array.isArray(m.dg)) this.dg = m.dg;
     if (Number.isFinite(m.calls)) this.calls = m.calls;
+    if (Number.isFinite(m.bombs)) this.bombs = m.bombs;
+    // a bomb is news once, when its id is new; the times come as "milliseconds from now" so clocks need not agree
+    if (m.bomb && m.bomb.id !== this.bomb?.id && CFG.giants[m.bomb.i]) {
+      const now = Date.now(), b = m.bomb;
+      this.bomb = { id: b.id, i: b.i, lobby: b.lobby, hit: now + b.hit, end: now + b.end, start: now + b.hit - CFG.bomb.warnSec * 1000 };
+      this.bus.emit('dirtBomb', { ...this.bomb, late: b.hit < CFG.bomb.warnSec * 1000 - 1500 });
+    } else if ('bomb' in m && !m.bomb && this.bomb && !this.bomb.fake) this.bomb = null;
     this.notice = typeof m.notice === 'string' ? m.notice : '';
     if (m.mounds) this.lobby.apply(m.mounds, first);
   },
@@ -82,6 +102,7 @@ const game = {
   },
   // Somebody else's bite, as seen from here: the same show (a dent, flying dirt) and none of the sums.
   remoteBite(r, tool) {
+    if (this.storming()) return;
     const x = r.pos.x + Math.sin(r.yaw) * tool.reach, z = r.pos.z + Math.cos(r.yaw) * tool.reach;
     this.fields.forEach((f, i) => {
       if (!f.inside(x, z) || this.status(i) !== 'buried' || f.heightAt(x, z) - f.floorAt(x, z) < 0.2) return;
@@ -453,7 +474,7 @@ function frame(dt) {
     const input = game.testInput || { x: (keys.KeyA || keys.ArrowLeft ? 1 : 0) - (keys.KeyD || keys.ArrowRight ? 1 : 0) + touch.x, z: (keys.KeyW || keys.ArrowUp ? 1 : 0) - (keys.KeyS || keys.ArrowDown ? 1 : 0) + touch.z,
       run: keys.ShiftLeft || keys.ShiftRight || touch.run, dig: keys.Space || mouseDig || touch.dig };
     player.update(dt, input);
-    lobby.update(dt);
+    if (!game.storming()) lobby.update(dt);   // in a dirt storm even the lobbyists stop to watch
     if ((saveT += dt) > 10) { saveT = 0; if (game.dirty) { game.dirty = false; game.save(); } }
     if ((slowT += dt) > 0.5) {
       slowT = 0;
@@ -483,7 +504,7 @@ function frame(dt) {
   } else if (player.body) { player.avatar.update(dt, { pos: player.pos, yaw: player.yaw, moving: false, digging: false, speed: 0, far: 5 }); if (!game.started) player.camYaw += dt * 0.25; }
   if ((clockT += dt) > 0.5) { clockT = 0; drawSigns(); if (game.over === 'lost' && game.giants.some((_, i) => game.status(i) === 'buried')) resume(); }
   net.update(dt);
-  for (const f of game.fields) { f.slump(dt); f.refreshIfStale(); }
+  for (const f of game.fields) { f.growStep(dt); f.slump(dt); f.refreshIfStale(); }
   stepClods(dt);
   for (const g of game.giants) {
     if (g.head) g.head.rotation.y = Math.sin(game.time * 0.35 + g.cfg.x) * 0.35 + (g.turn || 0);   // g.turn / g.nod: add-ons make him look round or flinch

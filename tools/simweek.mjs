@@ -9,6 +9,7 @@
 //           --return 0.5  chance an arrival is someone coming back (they keep their tool)
 //           --session 8   typical session length in minutes    --duty 0.6  share of a session spent actually digging
 // Pacing:   --burst --lead --boost --finishBy --floor --max --min   (defaults are the game's own, from shared/config.js)
+//           --bombAt 0.05 --bombGap 1800 --bombTo 0.01   dirt bombs (see CFG.bomb; --bombAt 0 = none)
 //           --target N   how many shovels' worth of digging, around the clock, a pile needs to finish on time (0 = no limit)
 // Other:    --days N (default: until the last deadline)   --progress 0.003,0   how far out each man is at the start
 //           --start 2026-11-11T12:00:00Z   --seed 1   --every 1 (days between report rows)
@@ -27,11 +28,11 @@ function rng(seed) { let a = seed >>> 0; return () => { a = (a + 0x6D2B79F5) >>>
 function run(name, o) {
   const rand = rng(num('seed', 1)), gauss = () => Math.sqrt(-2 * Math.log(1 - rand())) * Math.cos(2 * Math.PI * rand());
   const poisson = (m) => { if (m > 30) return Math.max(0, Math.round(m + Math.sqrt(m) * gauss())); let k = 0, p = Math.exp(-m), s = p; const u = rand(); while (u > s) { k++; p *= m / k; s += p; } return k; };
-  const c = { burst: num('burst', P.burst), lead: num('lead', P.lead), boost: num('boost', P.boost), finishBy: num('finishBy', P.finishBy), floor: num('floor', P.floor), target: num('target', P.target), min: num('min', P.min), max: num('max', P.max) };
+  const c = { bombAt: num('bombAt', CFG.bomb.at), bombGap: num('bombGap', CFG.bomb.gapSec), bombTo: num('bombTo', CFG.bomb.to), burst: num('burst', P.burst), lead: num('lead', P.lead), boost: num('boost', P.boost), finishBy: num('finishBy', P.finishBy), floor: num('floor', P.floor), target: num('target', P.target), min: num('min', P.min), max: num('max', P.max) };
   const pm = [c.min, c.max, c.boost], duty = num('duty', 0.6), back = num('return', 0.5), median = num('session', 8) * 60, sigma = 1;
   const meanSession = median * Math.exp(sigma * sigma / 2), cap = CFG.net.maxPlayers || 1e9;
   const start = args.start ? Date.parse(args.start) : Date.now(), prog0 = (args.progress || '0.0032,0').split(',').map(Number);
-  const piles = CFG.giants.map((g, i) => { const whole = TOTAL * D.doneAt, base = clamp((prog0[i] || 0) / D.doneAt, 0, 1); return { name: g.name, deadline: Date.parse(g.deadline), whole, rem: whole * (1 - base), base, result: null, mulSum: 0, n: 0 }; });
+  const piles = CFG.giants.map((g, i) => { const whole = TOTAL * D.doneAt, base = clamp((prog0[i] || 0) / D.doneAt, 0, 1); return { name: g.name, deadline: Date.parse(g.deadline), whole, rem: whole * (1 - base), base, result: null, mulSum: 0, n: 0, bombs: 0 }; });
   const end = start + num('days', Math.ceil((Math.max(...piles.map((p) => p.deadline)) - start) / 86400e3)) * 86400e3, every = num('every', 1);
   // how busy it is: a daily wave that peaks at 9pm Eastern, times a trend over the days
   const turnout = (t) => {
@@ -47,7 +48,7 @@ function run(name, o) {
   const full = CFG.tools.map((tl) => Math.PI * tl.r * tl.r * tl.depth / 2 / tl.period);   // cubic metres a second at full strength
 
   const known = [], here = [];   // everyone who has ever played (their total dug), and who is on right now
-  let sumOn = 0, peakOn = 0, steps = 0, nextRow = start + every * 86400e3;
+  let lastBomb = -Infinity, sumOn = 0, peakOn = 0, steps = 0, nextRow = start + every * 86400e3;
   console.log(`\n=== ${name}: about ${o.avg} online on average, ${o.trend} trend | target ${c.target}, burst ${c.burst}, lead ${c.lead}, boost ${c.boost}, finishBy ${c.finishBy} ===`);
   console.log('day  date        online avg/peak   ' + piles.map((p) => `${p.name.padEnd(7)} dug   vs schedule  lone shovel bite`).join('   '));
   for (let t = start; t < end; t += STEP * 1000) {
@@ -69,6 +70,8 @@ function run(name, o) {
       let out = 0;
       for (const h of on) { const tier = tierFor(h.who.dug); out += duty * digMul(q, tier, pm) * full[tier] * STEP; h.who.dug += duty * full[tier] * STEP; }
       p.rem = Math.max(0, p.rem - out);
+      // a dirt bomb: the lobbies fill it back to CFG.bomb.to ahead (never more than CFG.bomb.most of it at once)
+      if (c.bombAt > 0 && on.length && t - lastBomb >= c.bombGap * 1000 && ahead(p, t) > c.bombAt) { p.rem = Math.min(p.whole, p.rem + Math.min(CFG.bomb.most, ahead(p, t) - c.bombTo) * p.whole); p.bombs++; lastBomb = t; }
       if (p.rem <= 0.5) p.result = `DUG OUT on day ${((t - start) / 86400e3).toFixed(1)}, ${((p.deadline - t) / 86400e3).toFixed(1)} days early`;
     }
     for (const h of here) h.who.on = false;
@@ -86,7 +89,7 @@ function run(name, o) {
     }
   }
   const tiers = known.map((k) => tierFor(k.dug)).sort((a, b) => a - b);
-  for (const p of piles) console.log(`${p.name}: ${p.result || `still going at ${(100 * (1 - p.rem / p.whole)).toFixed(1)}% dug`}`);
+  for (const p of piles) console.log(`${p.name}: ${p.result || `still going at ${(100 * (1 - p.rem / p.whole)).toFixed(1)}% dug`}; ${p.bombs} dirt bomb${p.bombs === 1 ? '' : 's'}`);
   console.log(`${known.length} different people played; typical tool reached: ${CFG.tools[tiers[tiers.length >> 1] || 0].name}; best: ${CFG.tools[tiers[tiers.length - 1] || 0].name}`);
 }
 

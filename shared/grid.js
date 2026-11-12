@@ -75,6 +75,20 @@ export class DirtGrid {
     return removed;
   }
 
+  // The one way dirt goes back up (a lobby's dirt bomb). Every cell gets back the same share of what it has lost since
+  // the start, so the pile keeps its shape. Returns cubic metres poured on. Everyone else's copy has to be replaced,
+  // not merged, afterwards: the World bumps its fill generation for that (see worker/world.js).
+  refill(vol, touched) {
+    let missing = 0;
+    for (let k = 0; k < this.h.length; k++) missing += this.h0[k] - this.h[k];
+    missing *= this.cell * this.cell;
+    if (!(vol > 0) || missing <= 0) return 0;
+    const f = Math.min(1, vol / missing);
+    for (let k = 0; k < this.h.length; k++) { const add = (this.h0[k] - this.h[k]) * f; if (add > 0) { this.h[k] += add; if (touched) touched(k); } }
+    this.recount();
+    return f * missing;
+  }
+
   // Thickness of dirt in centimetres per cell: the wire and storage format.
   cm(k) { return Math.max(0, Math.min(65535, Math.round((this.h[k] - this.floor[k]) * 100))); }
   toCm() { const a = new Uint16Array(this.h.length); for (let k = 0; k < a.length; k++) a[k] = this.cm(k); return a; }

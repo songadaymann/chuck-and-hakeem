@@ -21,6 +21,8 @@ export class Room extends DurableObject {
     this.nextSid = 1;
     this.name = '';
     this.cm = CFG.giants.map((g, i) => new DirtGrid(g, i + 1).toCm());   // our mirror of the piles, for people who join
+    this.fresh = this.cm.map((a) => a.slice());   // the untouched piles, to rebuild a mirror from after a dirt bomb
+    this.gen = null;                              // the World's fill generation of each pile, as of our mirror
     this.since = 0; this.epoch = null; this.ops = []; this.hits = []; this.busy = false;
     this.mounds = null; this.pace = null; this.online = 0; this.timer = null; this.ticks = 0;
     this.perIp = N.perIp; this.fl = null; this.bornAt = Date.now(); this.foldAt = 0;
@@ -211,12 +213,18 @@ export class Room extends DurableObject {
       res.vols.forEach((v, i) => { if (v > 0) { const p = list[i][4]; p.dug += v; p.credit = true; if (p.left) gone.add(p); } });
       for (const p of gone) this.persist(null, p);   // someone who left while their last bites were on the way: one save, not one per bite
       const restarted = !!this.epoch && res.epoch !== this.epoch;
+      let whole = false;
       if (restarted) {
-        // The World restarted and may have lost its last few seconds. Give it our copy of the piles (lower wins),
-        // then ask again from the beginning so nothing it changed since is missed.
-        await this.world.heal(this.cm);
+        // The World restarted and may have lost its last few seconds. Give it our copy of the piles (lower wins, and
+        // only for a pile no dirt bomb has refilled since), then ask again from the beginning so nothing is missed.
+        await this.world.heal(this.cm, this.gen);
         res = await this.world.sync(this.name, count, 0, [], [], 0);
+        whole = true;
       }
+      // A dirt bomb put dirt back on a pile: our mirror of it is rebuilt from the World's whole copy, not merged.
+      const regrown = CFG.giants.map((g, i) => !!this.gen && Array.isArray(res.gen) && res.gen[i] !== this.gen[i]);
+      if (regrown.some(Boolean) && !whole) res = await this.world.sync(this.name, count, 0, [], [], 0);
+      if (Array.isArray(res.gen)) this.gen = res.gen.slice();
       this.epoch = res.epoch;
       this.since = res.tick;
       for (const [ws, p] of this.players) {
@@ -227,13 +235,22 @@ export class Room extends DurableObject {
         try { ws.send(JSON.stringify({ t: 'c', dug: Math.round(p.dug * 10) / 10 })); } catch (e) { /* closing */ }
       }
       res.cells.forEach((pairs, i) => {
+        if (regrown[i]) {
+          // everyone's browser replaces its pile with this one (frame kind 3: [3, giant, generation, ...every cell])
+          const cm = this.cm[i] = this.fresh[i].slice();
+          for (let j = 0; j < pairs.length; j += 2) cm[pairs[j]] = pairs[j + 1];
+          const f = new Uint16Array(cm.length + 3); f[0] = 3; f[1] = i; f[2] = this.gen[i]; f.set(cm, 3);
+          this.cast(f.buffer);
+          return;
+        }
         if (!pairs.length) return;
         for (let j = 0; j < pairs.length; j += 2) this.cm[i][pairs[j]] = Math.min(this.cm[i][pairs[j]], pairs[j + 1]);
         const f = new Uint16Array(pairs.length + 2); f[0] = 2; f[1] = i; f.set(pairs, 2);
         this.cast(f.buffer);
       });
       // tot / dg / calls: the numbers that grow with the crowd (everything ever dug, people on each pile, calls to Congress)
-      const pace = { rate: res.rate, q: res.q, au: res.au, pm: res.pm, dn: res.dn, st: res.st, dl: res.dl, notice: res.notice, tot: res.tot, dg: res.dg, calls: res.calls }, key = JSON.stringify([res.mounds, res.online, pace]);
+      const pace = { rate: res.rate, q: res.q, au: res.au, pm: res.pm, dn: res.dn, st: res.st, dl: res.dl, notice: res.notice, tot: res.tot, dg: res.dg, calls: res.calls,
+        gen: res.gen, bombs: res.bombs, bomb: res.bomb }, key = JSON.stringify([res.mounds, res.online, pace]);
       if (key !== this.worldKey) { this.worldKey = key; this.mounds = res.mounds; this.online = res.online; this.pace = pace; this.cast(JSON.stringify({ t: 'w', mounds: res.mounds, online: res.online, ...pace })); }
       if (res.perIp > 0) this.perIp = res.perIp;
       // the "save everyone now" lever on the switch, pulled before a deploy

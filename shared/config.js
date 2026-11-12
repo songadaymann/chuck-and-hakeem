@@ -58,7 +58,12 @@ export const CFG = {
   // finish just before its deadline, given how much digging has been arriving lately (averaged over tau seconds).
   // burst = how many times faster than that the pile may go while people are actually playing; min/max bound the rate.
   // All of these can be changed live from /admin.html. superRate applies when a man is marked "out in real life".
-  pace: { min: 1e-7, max: 4, burst: 4, target: 3, lead: 0.03, floor: 0.1, boost: 1.28, finishBy: 0.97, tuneSec: 5, superRate: 25, solo: 1 },
+  pace: { min: 1e-7, max: 4, burst: 4, target: 3, lead: 0.06, floor: 0.1, boost: 1.28, finishBy: 0.97, tuneSec: 5, superRate: 25, solo: 1 },
+  // Dirt bombs: the lobbies' answer to a crowd that is winning too easily. Once a pile is more than `at` of itself ahead
+  // of schedule, the next lobby in line airdrops a sack of dirt on it, filling it back to `to` ahead (never more than
+  // `most` of the pile in one go). Everything stops for it: from the warning to `stormSec` later nobody can dig.
+  // gapSec = the least time between two bombs, anywhere. `at` can be changed live from /admin.html (0 = no bombs).
+  bomb: { at: 0.05, to: 0, most: 0.05, gapSec: 14400, warnSec: 7, stormSec: 13 },
   // Shared-world server settings (see worker/). Costs scale with rooms kept awake and messages sent, so both are capped here.
   net: { roomSize: 80, maxPlayers: 4000, perIp: 40, sendMs: 500, syncMs: 1000, shown: 24, shownTouch: 12, saveEverySec: 60, idleKickSec: 300 },
   // Names are built from these lists, never typed, so there is nothing to moderate.
