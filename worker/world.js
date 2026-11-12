@@ -1,8 +1,8 @@
 import { DurableObject } from 'cloudflare:workers';
-import { CFG, moundSpots, wavesWanted, digMul } from '../shared/config.js';
+import { CFG, moundSpots, wavesWanted, digMul, lobbyHeat, lobbyAt } from '../shared/config.js';
 import { DirtGrid } from '../shared/grid.js';
 
-const N = CFG.net, P = CFG.pace, L = CFG.lobby, D = CFG.dirt;
+const N = CFG.net, P = CFG.pace, L = CFG.lobby, D = CFG.dirt, B = CFG.bomb;
 const STATES = ['play', 'in', 'out'];
 // Folding thin rooms after a peak: a room under `under` players that nobody has been sent to for `settleMs` is told to
 // close when fuller rooms have room for all of it and `spare` more. One fold every `everyMs`, so the counts catch up between two.
@@ -35,6 +35,9 @@ export class World extends DurableObject {
     this.mounds = moundSpots().map(() => 0); this.waves = 0; this.quiet = 0; this.waveAt = Date.now();
     // tot: full-strength cubic metres everyone has ever dug. calls: phone calls to Congress players have logged.
     this.tot = 0; this.calls = 0;
+    // Dirt bombs (CFG.bomb). gen: each pile's fill generation, bumped whenever dirt goes back UP, so rooms and browsers
+    // know to replace their copy instead of keeping the lower of two values. bomb: the one in progress, if any.
+    this.gen = each(0); this.bomb = null; this.bombs = 0; this.lastBomb = 0;
     this.tick = 1;
     this.epoch = crypto.randomUUID();   // changes whenever this object restarts, so rooms can tell
     this.born = Date.now();
@@ -42,7 +45,7 @@ export class World extends DurableObject {
     this.flush = 0; this.foldAt = 0;
     this.dirty = false; this.alarmSet = false;
     ctx.blockConcurrencyWhile(async () => {
-      const saved = await ctx.storage.get(['g0', 'g1', 't0', 't1', 'm2', 'over', 'since', 'base', 'for', 'left', 'tot', 'calls']);
+      const saved = await ctx.storage.get(['g0', 'g1', 't0', 't1', 'm2', 'over', 'since', 'base', 'for', 'left', 'tot', 'calls', 'bomb']);
       this.grids.forEach((g, i) => {
         const t = saved.get('t' + i), cm = saved.get('g' + i);
         if (t) {   // thickness in metres, as floats
@@ -60,6 +63,11 @@ export class World extends DurableObject {
       const m = saved.get('m2');
       if (m && Array.isArray(m.hp)) { m.hp.forEach((hp, i) => { if (i < this.mounds.length) this.mounds[i] = hp; }); this.waves = m.waves | 0; this.quiet = fin(m.quiet, 0, 1e9) ?? 0; }
       this.tot = fin(saved.get('tot'), 0, 1e15) ?? 0; this.calls = fin(saved.get('calls'), 0, 1e12) ?? 0;
+      const bm = saved.get('bomb');
+      if (bm && typeof bm === 'object') {
+        if (Array.isArray(bm.gen)) bm.gen.forEach((v, i) => { if (i < this.gen.length && Number.isInteger(v)) this.gen[i] = v; });
+        this.bombs = fin(bm.bombs, 0, 1e9) ?? 0; this.lastBomb = fin(bm.last, 0, 1e14) ?? 0;
+      }
       const s = saved.get('since');
       if (Array.isArray(s)) s.forEach((v, i) => { if (i < this.since.length && Number.isFinite(v)) this.since[i] = v; });
       const b = saved.get('base');
@@ -191,6 +199,10 @@ export class World extends DurableObject {
     const here = this.report(room, count, now);
     if (calls >= 1) { this.calls += Math.min(Math.floor(calls), 3 * N.roomSize); this.dirty = true; }
     this.tune(now);
+    this.bombTick(now);
+    // a dirt storm: everything stops. Digs and mound hits that arrive during one simply do not land (and earn nothing).
+    const storm = !!this.bomb && now < this.bomb.end;
+    if (storm) { ops = []; hits = []; }
     if (ops.length || hits.length) this.tick++;
     const live = this.grids.map((g, i) => this.active(i, now));
     ops.forEach(([x, z, r, depth, tier], oi) => {
@@ -224,13 +236,16 @@ export class World extends DurableObject {
     // mound health to one decimal, so that in a crowd (where one hit is a sliver) a hit still shows; never 0 while it stands
     return { tick: this.tick, epoch: this.epoch, vols, cells, mounds: this.mounds.map((h) => (h > 0 ? Math.max(0.1, Math.round(h * 10) / 10) : 0)), online: this.online(),
       tot: Math.round(this.tot), dg: this.diggers.map(Math.round), calls: this.calls, perIp: c.perIp, fl: this.flush, fold: !!here && count > 0 && this.fold(room, here, now),
+      gen: this.gen, bombs: this.bombs, bomb: this.bombNews(now),
       rate: this.grids.map((g, i) => this.mul(i, 0)), q: this.grids.map((g, i) => (this.auto(i) ? sig(this.q[i]) : 0)), au: this.grids.map((g, i) => (this.auto(i) ? 1 : 0)), pm: [c.min, c.max, c.boost], dn: this.grids.map((g) => g.done), st: c.state, dl: c.deadline, notice: c.notice };
   }
 
-  // The lobbies respond to the danger their men are in: mounds open one at a time as the piles go down.
+  // The lobbies respond to the danger their men are in: mounds open one at a time as the piles go down, and more
+  // of them may be open at once the lower the piles are and the more people are digging (lobbyHeat).
   openWaves(now) {
     if (!this.grids.some((g, i) => this.active(i, now))) return;
     const n = this.mounds.length, prog = this.grids.reduce((s, g) => s + Math.min(1, g.progress / D.doneAt), 0) / this.grids.length;
+    const cap = lobbyAt(lobbyHeat(prog, this.diggers.reduce((x, y) => x + y, 0))).maxOpen;
     let want = wavesWanted(prog);
     if (want - this.waves > 3) this.waves = want - 3;   // never a long queue of them after a big jump
     // ...and the lobbies never stay away for long: quietSec with somebody online and nothing open, and the next one opens
@@ -239,20 +254,59 @@ export class World extends DurableObject {
     this.waveAt = now;
     if (this.mounds.some((h) => h > 0)) this.quiet = 0;
     else if (this.online() > 0 && (this.quiet += dt) > L.quietSec * 1000 && want <= this.waves) want = this.waves + 1;
-    while (this.waves < want && this.mounds.filter((h) => h > 0).length < L.maxOpen) {
+    while (this.waves < want && this.mounds.filter((h) => h > 0).length < cap) {
       let i = this.waves % n, tries = 0;
       while (this.mounds[i] > 0 && tries++ < n) i = (i + 1) % n;
       this.mounds[i] = L.moundHp; this.waves++; this.quiet = 0; this.dirty = true;
     }
   }
 
+  // ---- dirt bombs. Checked on every sync: is a pile so far ahead of its schedule that its lobby panics?
+  bombTick(now) {
+    const b = this.bomb;
+    if (b) {
+      if (!b.done && now >= b.hit) { b.done = true; this.refill(b); }
+      if (now >= b.end) this.bomb = null;
+      return;
+    }
+    const c = this.ctl;
+    if (!(c.bombAt > 0) || now - this.lastBomb < B.gapSec * 1000 || this.online() === 0) return;
+    for (let i = 0; i < this.grids.length; i++) if (this.auto(i) && this.active(i, now) && this.ahead(i, now) > c.bombAt) { this.startBomb(i, now, false); return; }
+  }
+  // The lobbies take turns: whoever is next in CFG.lobbies drops this one. The size is set now, from how far ahead the
+  // pile is (a bomb from the switch is always the most a bomb may be).
+  startBomb(i, now, byHand) {
+    const share = byHand ? B.most : clamp(this.ahead(i, now) - B.to, 0, B.most);
+    this.bomb = { id: this.bombs + 1, i, lobby: CFG.lobbies[this.bombs % CFG.lobbies.length].id, hit: now + B.warnSec * 1000, end: now + B.stormSec * 1000,
+      vol: share * this.grids[i].total * D.doneAt, done: false };
+    this.bombs++; this.lastBomb = now; this.dirty = true;
+  }
+  // Impact. The dirt goes back on, every changed cell is marked so rooms hear of it, and the generation moves on so they
+  // replace their copy rather than merge it. Written to disk at once: a restart must not lose dirt that went back UP.
+  refill(b) {
+    const g = this.grids[b.i];
+    if (g.done) return;
+    this.tick++;
+    const st = this.stamp[b.i], sent = this.sent[b.i], t = this.tick;
+    b.poured = g.refill(b.vol, (k) => { const cm = g.cm(k); if (cm !== sent[k]) { sent[k] = cm; st[k] = t; } });
+    this.gen[b.i] = (this.gen[b.i] + 1) % 65536;
+    this.dirty = true;
+    this.save().catch(() => {});
+  }
+  // What rooms pass on to browsers: times are milliseconds from now, so nobody's clock has to agree with ours.
+  bombNews(now) {
+    const b = this.bomb;
+    return b && now < b.end ? { id: b.id, i: b.i, lobby: b.lobby, hit: b.hit - now, end: b.end - now } : null;
+  }
+
   // A room's copy of the piles, offered after we restarted: anything it has lower than us was dug before we lost it.
-  heal(cms) {
+  // Only a copy from the same fill generation: one from before a dirt bomb would dig the bomb's dirt straight back out.
+  heal(cms, gens) {
     let any = false;
     this.grids.forEach((g, i) => {
       const a = cms[i], was = g.left;
       let merged = false;
-      if (!a) return;
+      if (!a || (Array.isArray(gens) && gens[i] !== this.gen[i])) return;
       for (let k = 0; k < a.length && k < g.h.length; k++) if (g.mergeCm(k, a[k])) { merged = true; if (!any) { any = true; this.tick++; } this.stamp[i][k] = this.tick; this.sent[i][k] = g.cm(k); }
       if (merged) { g.recount(); g.left = Math.min(g.left, was); }   // never back up: a pile called finished with crumbs left stays finished
     });
@@ -268,7 +322,8 @@ export class World extends DurableObject {
   async save() {
     this.dirty = false;
     try {
-      const put = { m2: { hp: this.mounds, waves: this.waves, quiet: this.quiet }, left: this.grids.map((g) => g.left), tot: this.tot, calls: this.calls };
+      const put = { m2: { hp: this.mounds, waves: this.waves, quiet: this.quiet }, left: this.grids.map((g) => g.left), tot: this.tot, calls: this.calls,
+        bomb: { gen: this.gen, bombs: this.bombs, last: this.lastBomb } };
       this.grids.forEach((g, i) => { put['t' + i] = Float32Array.from(g.h, (v, k) => v - g.floor[k]).buffer; });
       await this.ctx.storage.put(put);
     } catch (e) {
@@ -281,7 +336,7 @@ export class World extends DurableObject {
   rebuild() {
     const o = this.over;
     this.ctl = { state: o.state.map((s) => s || 'play'), deadline: CFG.giants.map((g, i) => o.deadline[i] ?? Date.parse(g.deadline)), fixed: o.fixed.slice(),
-      min: o.min ?? P.min, max: o.max ?? P.max, burst: o.burst ?? P.burst, target: o.target ?? P.target, lead: o.lead ?? P.lead, boost: o.boost ?? P.boost, finishBy: o.finishBy ?? P.finishBy, notice: o.notice || '',
+      min: o.min ?? P.min, max: o.max ?? P.max, burst: o.burst ?? P.burst, target: o.target ?? P.target, lead: o.lead ?? P.lead, boost: o.boost ?? P.boost, finishBy: o.finishBy ?? P.finishBy, bombAt: o.bombAt ?? B.at, notice: o.notice || '',
       // the two crowd limits: seats in the whole game, and connections one network address may hold in one room
       maxPlayers: Math.floor(o.maxPlayers ?? N.maxPlayers), perIp: Math.floor(o.perIp ?? N.perIp) };
     if (this.ctl.min > this.ctl.max) this.ctl.min = this.ctl.max;
@@ -300,7 +355,7 @@ export class World extends DurableObject {
       }
       if (Array.isArray(p.fixed) && i in p.fixed) o.fixed[i] = fin(p.fixed[i], 1e-9, 1000);   // anything else clears it
     });
-    for (const [k, lo, hi] of [['min', 1e-9, 1000], ['max', 1e-9, 1000], ['burst', 1, 10000], ['target', 0, 100000], ['lead', 0.001, 1], ['boost', 1, 3], ['finishBy', 0.05, 1], ['maxPlayers', 0, 100000], ['perIp', 1, 1000]]) {
+    for (const [k, lo, hi] of [['min', 1e-9, 1000], ['max', 1e-9, 1000], ['burst', 1, 10000], ['target', 0, 100000], ['lead', 0.001, 1], ['boost', 1, 3], ['finishBy', 0.05, 1], ['bombAt', 0, 1], ['maxPlayers', 0, 100000], ['perIp', 1, 1000]]) {
       if (p[k] === null) delete o[k]; else if (fin(p[k], lo, hi) !== null) o[k] = p[k];
     }
     if (typeof p.notice === 'string') o.notice = p.notice.replace(/[\u0000-\u001f<>]/g, ' ').slice(0, 140);
@@ -316,6 +371,8 @@ export class World extends DurableObject {
       if (fin(patch.tot, 0, 1e15) !== null) this.tot = patch.tot;
       if (fin(patch.calls, 0, 1e12) !== null) this.calls = Math.floor(patch.calls);
       if (patch.flush === true) this.flush = Date.now();
+      // "drop one now", from the switch: on pile 0 or 1, whatever the schedule says (but never two at once)
+      if (Number.isInteger(patch.bomb) && this.grids[patch.bomb] && !this.bomb && this.active(patch.bomb, Date.now())) this.startBomb(patch.bomb, Date.now(), true);
       await this.ctx.storage.put({ over: this.over, since: this.since, base: this.base, for: this.ctl.deadline });
       await this.save();
       this.tune(Date.now(), true);
@@ -323,7 +380,8 @@ export class World extends DurableObject {
     const now = Date.now();
     return { ...this.status(), control: this.ctl, setByHand: this.over, codeDeadline: CFG.giants.map((g) => Date.parse(g.deadline)), flushedAt: this.flush,
       needPerSec: this.grids.map((g, i) => this.need(i, now)), speed: this.grids.map((g, i) => this.speed(i, now)), ahead: this.grids.map((g, i) => this.ahead(i, now)), diggers: this.diggers, left: this.grids.map((g, i) => this.rem(i)),
-      shovelMul: this.grids.map((g, i) => this.mul(i, 0)), topMul: this.grids.map((g, i) => this.mul(i, CFG.tools.length - 1)), moundHp: this.mounds, waves: this.waves, defaults: { ...P, maxPlayers: N.maxPlayers, perIp: N.perIp } };
+      shovelMul: this.grids.map((g, i) => this.mul(i, 0)), topMul: this.grids.map((g, i) => this.mul(i, CFG.tools.length - 1)), moundHp: this.mounds, waves: this.waves, defaults: { ...P, bombAt: B.at, maxPlayers: N.maxPlayers, perIp: N.perIp },
+      bomb: this.bombNews(now), bombs: this.bombs, lastBomb: this.lastBomb, gen: this.gen };
   }
 
   status() {

@@ -27,7 +27,10 @@ not throw. Positions are world metres (+Y up). The Capitol's west front faces +Z
 | `clock` | `i, giant, secs` | a man's clock passed 24 h, 1 h or 10 min to go |
 | `toast` | `msg, secs, pri` | the big centre-screen line changed |
 | `cells` | `giant, field, pairs` | the server sent dirt other people dug: `pairs` is `[cell, cm, cell, cm, ...]`; cell `k` is at `field.x0 + (k % field.n) * field.cell`, `field.z0 + floor(k / field.n) * field.cell` |
+| `dirtBomb` | `id, i, lobby, start, hit, end, late` | a lobby is airdropping dirt onto pile `i` (times are this browser's `Date.now()`; `late`: we joined after the warning). Nobody digs from `start` to `end` (see `game.storming()`) |
+| `regrow` | `giant, field` | a dirt bomb landed: the pile is swelling back up to the server's new copy |
 | `online` | `count, room, back` | connected to the shared dig (`back`: this is a reconnect) |
+| `newBuild` | — | a newer build is being served than this tab is running (update.js has put up its reload banner) |
 | `join` / `leave` | `sid, name` | someone entered / left your room |
 | `remoteDig` | `x, y, z, tier, tool, near` | another player's bite landed (`near`: they are drawn with a full body) |
 | `remoteTool` | `remote, sid, name, tier, tool` | another player in your room earned a tool |
@@ -48,6 +51,7 @@ not throw. Positions are world metres (+Y up). The Capitol's west front faces +Z
 `game.lobby` (`mounds`, `agents`, `moundsLeft`), `game.net` (`online`, `everOnline`, `full`, `count`, `remotes`: Map of `{ sid, name, char, tier, flags, pos, yaw, avatar }`),
 `game.surface(x, z)`, `game.status(i)` (`buried` / `dug` / `lost`), `game.supercharged(i)`, `game.clock(i)`, `game.deadlines[i]`, `game.time` (seconds of game time), `game.started`, `game.over`, `game.solo`,
 `game.tot` (cubic metres everyone has dug, ever), `game.dg[i]` (people digging each pile right now), `game.calls` (calls to Congress logged by all players),
+`game.bomb` (the dirt bomb in progress or null), `game.bombs` (how many have been dropped), `game.storming()` (true while one is on: nobody digs),
 `game.lastVisit` (`{ seen, pct }` from the previous session on this device, or null), `game.sceneryMods.<name>` (what each scenery module returned, e.g. `traffic.vehicles`, `sky.flyers`), `game.plugins.<name>`.
 
 ## Things you may call

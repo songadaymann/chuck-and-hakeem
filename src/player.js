@@ -136,6 +136,7 @@ export class Player {
   bite(cfg) {
     const g = this.game;
     const x = this.pos.x + Math.sin(this.yaw) * cfg.reach, z = this.pos.z + Math.cos(this.yaw) * cfg.reach;
+    if (g.storming?.()) { g.hud.toast('TAKE COVER!\nnobody digs in a dirt storm', 1, 0); return; }   // everything stops for the lobbies' dirt bomb
     g.bus.emit('bite', { x, z, tier: this.toolIndex, tool: cfg });   // the tool came down here, whether or not it found dirt
     g.lobby.strike(x, z, Math.max(cfg.r, 2.6), cfg.dmg, this.toolIndex < this.tier);
     if (g.net?.everOnline && !g.net.online) { g.hud.toast(g.net.full ? 'THE DIG IS FULL\nyou are back in when a spot opens' : 'RECONNECTING...\nyour digs count again in a moment', 1.2, 0); return; }   // cut off from the shared dig: nothing counts until we are back

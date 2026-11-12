@@ -59,6 +59,7 @@ export class DirtField extends DirtGrid {
 
   // Server data: a full snapshot or a list of changed cells. Lower value wins, so our own fresh digs are never undone.
   applyCells(pairs) {
+    if (this.grow) { const to = this.grow.to; for (let i = 0; i < pairs.length; i += 2) to[pairs[i]] = Math.min(to[pairs[i]], this.floor[pairs[i]] + pairs[i + 1] / 100); return; }   // mid-swell: aim lower instead
     let changed = false;
     for (let i = 0; i < pairs.length; i += 2) if (this.mergeCm(pairs[i], pairs[i + 1])) changed = true;
     if (changed) { this.recount(); this.stale = true; }
@@ -69,7 +70,24 @@ export class DirtField extends DirtGrid {
     if (changed) { this.recount(); this.stale = true; }
   }
 
-  reset() { this.resetHeights(); this.dent.fill(0); this.dented = false; this.stale = true; }
+  reset() { this.grow = null; this.resetHeights(); this.dent.fill(0); this.dented = false; this.stale = true; }
+
+  // A dirt bomb landed: the server's whole pile replaces ours (it is higher now, so it cannot be merged). It swells up
+  // over `secs` rather than popping, with a wobble on the way, like a soufflé that has been lobbied.
+  regrow(cm, secs = 2.6) {
+    const to = new Float64Array(this.h.length);
+    for (let k = 0; k < to.length; k++) to[k] = this.floor[k] + (k < cm.length ? cm[k] : 0) / 100;
+    this.grow = { from: Float64Array.from(this.h), to, t: 0, secs };
+    this.dent.fill(0); this.dented = false;
+  }
+  growStep(dt) {
+    const gr = this.grow;
+    if (!gr) return;
+    const x = Math.min(1, (gr.t += dt) / gr.secs), u = 1 - (1 - x) ** 3 + 0.14 * Math.sin(x * Math.PI * 3) * (1 - x);
+    for (let k = 0; k < this.h.length; k++) this.h[k] = Math.min(this.h0[k], Math.max(this.floor[k], gr.from[k] + (gr.to[k] - gr.from[k]) * u));   // the wobble never pokes above the untouched pile
+    if (x >= 1) { this.h.set(gr.to); this.grow = null; }
+    this.recount(); this.stale = true;
+  }
 
   // Rebuild the visible sheet at most once a frame, however many digs landed.
   refreshIfStale() { if (this.stale) { this.stale = false; this.refresh(); } }

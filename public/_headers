@@ -14,3 +14,7 @@
 # The song (tools/song.sh remakes it under the same name).
 /audio/*
   Cache-Control: public, max-age=86400
+
+# The name of the build being served: open tabs ask it whether a deploy has happened (src/plugins/update.js).
+/version.json
+  Cache-Control: no-store

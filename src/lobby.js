@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CFG, moundSpots, wavesWanted } from './config.js';
+import { CFG, moundSpots, wavesWanted, lobbyHeat, lobbyAt } from './config.js';
 import { ps1ify, textTex } from './ps1.js';
 import { person, model, attach } from './assets.js';
 import { worldH } from './world.js';
@@ -21,11 +21,13 @@ const glowMat = {};
 
 // Lobby mounds are dotted around the grounds but stay shut until the dig alarms them. An open mound keeps sending
 // lobbyists at you until it is flattened. Mound health is shared; the lobbyists themselves are yours alone.
+// They come thicker, faster and throw more often the lower the piles are and the more people are digging (heat).
 export class Lobby {
   constructor(game) {
     this.game = game;
     this.mounds = []; this.agents = []; this.shots = [];
     this.spawning = 0; this.waves = 0; this.waveT = 0;
+    this.heat = 0; this.heatT = 1; this.now = lobbyAt(0);   // now = the lobby numbers at the current heat
   }
 
   async build(saved) {
@@ -134,16 +136,19 @@ export class Lobby {
     }
   }
 
+  // Share of the two piles gone (0..1), the same sum the server does.
+  progress() { const f = this.game.fields; return f.reduce((s, x) => s + Math.min(1, x.progress / CFG.dirt.doneAt), 0) / f.length; }
+
   // Offline practice has no server to open mounds, so do the same sum here.
   practiceWaves() {
     const g = this.game;
     if (!g.giants.some((_, i) => g.status(i) === 'buried')) return;
-    const prog = g.fields.reduce((s, f) => s + Math.min(1, f.progress / CFG.dirt.doneAt), 0) / g.fields.length, n = this.mounds.length;
+    const prog = this.progress(), n = this.mounds.length;
     let want = wavesWanted(prog);
     if (want - this.waves > 3) this.waves = want - 3;
     // ...and the lobbies never stay away for long: with nothing open for quietSec, the next one opens anyway (the server does the same)
     if (this.moundsLeft) this.quietT = 0; else if ((this.quietT = (this.quietT || 0) + 0.5) > L.quietSec && want <= this.waves) want = this.waves + 1;
-    while (this.waves < want && this.moundsLeft < L.maxOpen) {
+    while (this.waves < want && this.moundsLeft < this.now.maxOpen) {
       let i = this.waves % n, tries = 0;
       while (this.mounds[i].hp > 0 && tries++ < n) i = (i + 1) % n;
       this.set(this.mounds[i], L.moundHp, false); this.waves++; this.quietT = 0;
@@ -160,6 +165,11 @@ export class Lobby {
 
   update(dt) {
     const g = this.game, pl = g.player, target = pl.pos, hitR = pl.inVehicle ? 3.5 : 1.3;
+    if ((this.heatT += dt) > 0.5) {   // on your own (practice, or cut off) you count as the one digger
+      this.heatT = 0;
+      const diggers = !g.solo && g.net?.online ? g.dg.reduce((s, n) => s + (n || 0), 0) : 1;
+      this.now = lobbyAt(this.heat = lobbyHeat(this.progress(), diggers));
+    }
     if ((g.solo || !g.net?.everOnline) && (this.waveT += dt) > 0.5) { this.waveT = 0; this.practiceWaves(); }
     for (const m of this.mounds) {
       if (m.hitT > 0) { m.hitT -= dt; m.root.rotation.z = m.hitT > 0 ? Math.sin(m.hitT * 60) * 0.05 : 0; }
@@ -170,7 +180,7 @@ export class Lobby {
       }
       if (m.hp <= 0) continue;
       m.timer -= dt;
-      if (m.timer <= 0) { m.timer = L.spawnEvery; if (m.alive < L.maxPerMound) this.spawn(m); }
+      if (m.timer <= 0) { m.timer = this.now.spawnEvery; if (m.alive < this.now.maxPerMound) this.spawn(m); }
     }
     // a machine on the move flattens anyone it touches
     const runR = pl.inVehicle && pl.vel.length() > 1.5 ? Math.min(6, 1.6 + pl.toolCfg.r * 0.35) : 0;
@@ -197,14 +207,14 @@ export class Lobby {
       } else if (a.throwT > 0) { a.throwT -= dt; a.p.play('swing', { speed: 2.2, fade: 0.05 });
       } else if (pl.dead > 0 && dist < 7) { a.p.play('cheer', { speed: 1.5 });   // gloating over you while you are down
       } else if (dist > L.stand || pl.dead > 0) {   // they walk right up to you (inside swatting distance), throwing on the way in
-        const step = L.speed * dt, sx = dx / (dist || 1) * step, sz = dz / (dist || 1) * step;
+        const step = this.now.speed * dt, sx = dx / (dist || 1) * step, sz = dz / (dist || 1) * step;
         if (ok(a.pos.x + sx, a.pos.z + sz, step)) { a.pos.x += sx; a.pos.z += sz; }
         else if (ok(a.pos.x + Math.sign(sx) * step, a.pos.z, step)) a.pos.x += Math.sign(sx) * step;
         else if (ok(a.pos.x, a.pos.z + step, step)) a.pos.z += step;   // blocked by the building: slide toward its open front
         else a.pos.x += (a.pos.x < 0 ? -1 : 1) * step;   // boxed in against a wall: shuffle outward along it
         a.p.play('walk', { speed: 2.1 });
       } else a.p.play('idle');
-      if (dist < L.range && a.cd <= 0 && pl.dead <= 0) { a.cd = L.cooldown + Math.random(); this.throwAt(a, target, dist); }
+      if (dist < L.range && a.cd <= 0 && pl.dead <= 0) { a.cd = this.now.cooldown + Math.random(); this.throwAt(a, target, dist); }
       a.pos.y = g.surface(a.pos.x, a.pos.z);
       a.p.root.position.copy(a.pos); a.p.root.rotation.y = a.yaw;
       a.p.root.visible = !(a.flash > 0 && (a.flash -= dt) > 0 && Math.floor(a.flash * 40) % 2);

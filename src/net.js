@@ -81,6 +81,9 @@ export class Net {
       p.serverDug = Math.max(m.dug, 0);
       p.dug = same ? Math.max(p.dug, p.serverDug) : p.serverDug;
       p.tier = same ? Math.max(p.tier, tierFor(p.serverDug)) : tierFor(p.serverDug);
+      // a pile a dirt bomb refilled while we were away: our copy is lower than the truth, so start it over (the snapshot follows)
+      if (was && Array.isArray(m.gen)) g.fields.forEach((f, i) => { if (f.gen !== undefined && f.gen !== m.gen[i]) f.reset(); });
+      if (Array.isArray(m.gen)) g.fields.forEach((f, i) => { f.gen = m.gen[i]; });
       if (!was) {   // the shared piles replace the warm-up ones (the snapshot frames follow this message), and each man's state is news from here on, not a change to announce
         for (const f of g.fields) f.reset();
         for (const gi of g.giants) gi.was = gi.left = undefined;
@@ -115,10 +118,12 @@ export class Net {
     else if (m.t === 'w') { this.count = m.online; g.world(m, false); }
   }
 
-  // Binary frames: [kind, giant, ...]. kind 1 = every cell's dirt thickness in cm, kind 2 = (cell, cm) pairs.
+  // Binary frames: [kind, giant, ...]. kind 1 = every cell's dirt thickness in cm, kind 2 = (cell, cm) pairs,
+  // kind 3 = [3, giant, fill generation, ...every cell]: a dirt bomb refilled the pile, so this replaces ours outright.
   onCells(a) {
     const f = this.game.fields[a[1]];
     if (!f) return;
+    if (a[0] === 3) { f.gen = a[2]; f.regrow(a.subarray(3)); this.game.bus.emit('regrow', { giant: a[1], field: f }); return; }   // a dirt bomb: replace, do not merge
     if (a[0] === 1) { f.applySnapshot(a.subarray(2)); f.shown = f.progress; } else if (a[0] === 2) { f.applyCells(a.subarray(2)); this.game.bus.emit('cells', { giant: a[1], field: f, pairs: a.subarray(2) }); }
   }
 

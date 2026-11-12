@@ -1,0 +1,10 @@
+/* The "new version" banner (update.js): top centre, under mann.cool's bar when the shell is there, above the bomb strip. */
+#newbuild { position: fixed; left: 50%; top: 12px; transform: translateX(-50%); z-index: 50; pointer-events: auto; cursor: pointer;
+  display: flex; gap: 10px; align-items: center; padding: 8px 14px; border: 3px solid #14110d; background: #ffc21a; color: #14110d;
+  box-shadow: 4px 4px 0 #000; font: 16px/1 Silkscreen, monospace; animation: nbin 0.35s steps(4); }
+#newbuild b { font: 400 20px/1 "Rubik Dirt", Impact, sans-serif; }
+#newbuild:hover, #newbuild:focus-visible { background: #fff; outline: none; }
+@keyframes nbin { from { transform: translate(-50%, -150%); } }
+@media (max-width: 700px) { #newbuild { font-size: 13px; padding: 7px 10px; } #newbuild b { font-size: 16px; } }
+@media (prefers-reduced-motion: reduce) { #newbuild { animation: none; } }
+html:has(> mann-cool-game-shell) #newbuild { top: 68px; }

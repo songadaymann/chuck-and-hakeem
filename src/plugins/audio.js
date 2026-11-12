@@ -35,6 +35,7 @@ const MIX = {
   far: [0.11, 0.09, 3], blip: [0.13, 0.5, 1], pop: [0.13, 0.4, 1], back: [0.22, 2, 1], ring: [0.21, 2, 1],
   honk: [0.11, 0.5, 1], bell: [0.16, 0.5, 1], siren: [0.05, 9, 1], pigeons: [0.36, 2, 1], whoosh: [0.18, 0.4, 2], goose: [0.22, 0.3, 2], bird: [0.07, 1, 1],
   click: [0.24, 0.04, 2], slam: [0.2, 0.3, 1], shift: [0.12, 2, 1],
+  whistle: [0.2, 2, 1], kaboom: [0.62, 2, 1],   // the lobbies' dirt bomb, falling and landing (dirtbomb add-on)
 };
 // each machine's engine: pitch (Hz), chugs a second, how dull, how much rattle, how loud
 const ENGINES = { skid_steer: [62, 15, 560, 0.3, 0.1], backhoe_loader: [52, 12, 480, 0.35, 0.11], excavator: [45, 10, 420, 0.4, 0.12], bulldozer: [38, 8, 360, 0.6, 0.14],
@@ -159,6 +160,10 @@ export function engine(ac, game) {
     splat(v) { hiss(v, 0, 1400, 0.2, 1, 'lowpass', 180); tone(v, 0, 170, 0.18, 0.8, 'sine', 55); tone(v, 0.05, 240, 0.09, 0.3, 'sine', 520); tone(v, 0.13, 200, 0.08, 0.25, 'sine', 420); },
     paper(v) { for (let i = 0; i < 5; i++) hiss(v, i * 0.05 + Math.random() * 0.03, vary(4500, 0.2), 0.04, 0.5, 'highpass', 0, { a: 0.01 }); },
     klaxon(v) { const lp = filt(v, 950); for (const t of [0, 0.5]) { tone(v, t, 150, 0.42, 0.5, 'sawtooth', 196, { into: lp, a: 0.03, hold: 0.3, bend: 0.25 }); tone(v, t, 226, 0.42, 0.3, 'square', 294, { into: lp, a: 0.03, hold: 0.3, bend: 0.25 }); } },
+    // a cartoon bomb falling: one long sine sliding down two octaves, wobbling as it goes
+    whistle(v, o) { const d = o.dur || 2.6; vib(v, tone(v, 0, 2100, d, 0.5, 'sine', 420, { a: 0.15, hold: d * 0.8 }), 0, d, 6, 30); },
+    // and landing: a deep boom, a crack, then dirt raining down for a good while
+    kaboom(v) { heavy(v, 0, 58, 1.8, 1.2); hiss(v, 0, 2400, 0.25, 0.9, 'lowpass', 300); hiss(v, 0.05, 900, 2.6, 0.5, 'lowpass', 160, { a: 0.1, hold: 0.6 }); patter(v, 0.6, 26, 800, 2.4); },
     thump(v) { const f = vary(125, 0.06); tone(v, 0, f, 0.16, 1, 'sine', f * 0.6); hiss(v, 0, 320, 0.12, 0.9, 'bandpass', 0, { q: 6 }); tone(v, 0, f * 2.5, 0.05, 0.2, 'triangle'); },
     moundDown(v) {
       hiss(v, 0, 500, 1.5, 1, 'lowpass', 70, { a: 0.1, hold: 0.7 }); tone(v, 0, 60, 1.3, 0.6, 'sine', 32, { a: 0.1, hold: 0.6 }); tone(v, 0, 120, 1.1, 0.25, 'triangle', 60, { a: 0.1, hold: 0.5 });

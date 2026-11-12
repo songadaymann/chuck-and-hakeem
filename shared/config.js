@@ -53,12 +53,21 @@ export const CFG = {
   // tosEvery = at most one terms-of-service pop-up per this many seconds. quietSec = the lobbies never stay away longer than this:
   // with nothing open for that long (and somebody digging), the next mound opens whatever the progress.
   lobby: { moundsEach: 3, moundHp: 300, spawnEvery: 20, maxPerMound: 3, lobbyistHp: 2, speed: 3.2, range: 14, stand: 2.8, cooldown: 4, shotSpeed: 13, dmg: 4, deductibleDigs: 2, tosEvery: 20, quietSec: 180,
-           firstAt: 0.001, openEvery: 0.01, maxOpen: 2, meleeR: 3.4, whack: 0.38, hitMul: 4, perMound: 6 },
+           firstAt: 0.001, openEvery: 0.01, maxOpen: 2, meleeR: 3.4, whack: 0.38, hitMul: 4, perMound: 6,
+           // The lobbies push harder the lower the piles get and the more people are digging. heat (0..1) = pile x (share of
+           // the two piles gone) + crowd x (how busy the dig is: 0 for a lone digger, 1 at crowdFull people, counted in
+           // doublings). At heat 0 the numbers above apply, at heat 1 the ones in `at`, and in between they slide.
+           ramp: { pile: 0.6, crowd: 0.4, crowdFull: 64, at: { maxOpen: 4, spawnEvery: 10, maxPerMound: 5, speed: 4.2, cooldown: 2.8 } } },
   // Pacing. Every dig is multiplied by a rate the server keeps re-tuning so each pile falls at the speed needed to
   // finish just before its deadline, given how much digging has been arriving lately (averaged over tau seconds).
   // burst = how many times faster than that the pile may go while people are actually playing; min/max bound the rate.
   // All of these can be changed live from /admin.html. superRate applies when a man is marked "out in real life".
-  pace: { min: 1e-7, max: 4, burst: 20, target: 1.5, lead: 0.1, floor: 0.1, boost: 1.28, finishBy: 0.9, tuneSec: 5, superRate: 25, solo: 1 },
+  pace: { min: 1e-7, max: 4, burst: 4, target: 3, lead: 0.06, floor: 0.1, boost: 1.28, finishBy: 0.97, tuneSec: 5, superRate: 25, solo: 1 },
+  // Dirt bombs: the lobbies' answer to a crowd that is winning too easily. Once a pile is more than `at` of itself ahead
+  // of schedule, the next lobby in line airdrops a sack of dirt on it, filling it back to `to` ahead (never more than
+  // `most` of the pile in one go). Everything stops for it: from the warning to `stormSec` later nobody can dig.
+  // gapSec = the least time between two bombs, anywhere. `at` can be changed live from /admin.html (0 = no bombs).
+  bomb: { at: 0.05, to: 0, most: 0.05, gapSec: 14400, warnSec: 7, stormSec: 13 },
   // Shared-world server settings (see worker/). Costs scale with rooms kept awake and messages sent, so both are capped here.
   net: { roomSize: 80, maxPlayers: 4000, perIp: 40, sendMs: 500, syncMs: 1000, shown: 24, shownTouch: 12, saveEverySec: 60, idleKickSec: 300 },
   // Names are built from these lists, never typed, so there is nothing to moderate.
@@ -79,6 +88,15 @@ const SPOTS = [[118, 30], [-62, 84], [150, 78], [-118, 30], [62, 84], [-150, 78]
 export function moundSpots() { return SPOTS.map(([x, z], i) => ({ i, lobby: CFG.lobbies[i % CFG.lobbies.length], x, z })); }
 // How many mounds should have opened by the time this much of the two piles (0..1, averaged) is gone.
 export const wavesWanted = (p) => (p < CFG.lobby.firstAt ? 0 : 1 + Math.floor((p - CFG.lobby.firstAt) / CFG.lobby.openEvery));
+// How hard the lobbies are pushing (0..1), from the share of the two piles gone and how many people are digging them.
+export const lobbyHeat = (p, diggers) => { const R = CFG.lobby.ramp; return Math.max(0, Math.min(1, R.pile * Math.max(0, Math.min(1, p)) + R.crowd * Math.log2(Math.max(1, diggers || 0)) / Math.log2(R.crowdFull))); };
+// The lobby numbers that change with heat, at this heat. The two counts are whole numbers.
+export const lobbyAt = (heat) => {
+  const L = CFG.lobby, o = {};
+  for (const k in L.ramp.at) o[k] = L[k] + (L.ramp.at[k] - L[k]) * heat;
+  o.maxOpen = Math.round(o.maxOpen); o.maxPerMound = Math.round(o.maxPerMound);
+  return o;
+};
 export const tierFor = (dug) => { let t = 0; while (t + 1 < CFG.tools.length && dug >= CFG.tools[t + 1].need) t++; return t; };
 export const randomName = () => `${CFG.nameA[Math.floor(Math.random() * CFG.nameA.length)]} ${CFG.nameB[Math.floor(Math.random() * CFG.nameB.length)]} ${10 + Math.floor(Math.random() * 90)}`;
 export const validName = (n) => { const m = /^(\S+) (\S+) (\d\d)$/.exec(n || ''); return !!m && CFG.nameA.includes(m[1]) && CFG.nameB.includes(m[2]); };
