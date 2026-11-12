@@ -68,6 +68,14 @@ export const CFG = {
   // `most` of the pile in one go). Everything stops for it: from the warning to `stormSec` later nobody can dig.
   // gapSec = the least time between two bombs, anywhere. `at` can be changed live from /admin.html (0 = no bombs).
   bomb: { at: 0.05, to: 0, most: 0.05, gapSec: 14400, warnSec: 7, stormSec: 13 },
+  // Spending guard (worker/world.js). Cloudflare has no spending cap, so the World keeps its own running estimate of
+  // today's bill (UTC day): every room-second (a room awake, plus its once-a-second call to us), every player-second
+  // (two position messages a second, billed 20 to 1, plus saves), every second we are awake with someone online, and
+  // every arrival (about 120 Worker requests to load the game under /leave). Workers Paid prices, checked 2026-11-11:
+  // Durable Object requests $0.15/M, duration $12.50/M GB-s at 128 MB, Worker requests $0.30/M. An estimate, not the bill.
+  // Past `perDay` dollars nobody new is seated (newcomers dig a practice pile); past `stopMul` x perDay every room is
+  // closed as well, until the next UTC day. perDay can be changed live from /admin.html (0 = no limit).
+  cost: { perDay: 40, stopMul: 2, roomSec: 1.7e-6, playerSec: 2e-8, worldSec: 1.6e-6, join: 4e-5 },
   // Shared-world server settings (see worker/). Costs scale with rooms kept awake and messages sent, so both are capped here.
   net: { roomSize: 80, maxPlayers: 4000, perIp: 40, sendMs: 500, syncMs: 1000, shown: 24, shownTouch: 12, saveEverySec: 60, idleKickSec: 300 },
   // Names are built from these lists, never typed, so there is nothing to moderate.

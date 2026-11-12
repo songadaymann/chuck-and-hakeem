@@ -45,6 +45,9 @@
   <small>Everyone past this digs a private practice pile until a spot opens. Raise it in steps while watching the numbers below. 0 closes the shared dig to newcomers.</small>
   <label>Most connections from one network address in one room (blank = the game's own number) <input id="perIp" type="number" step="1" min="1"></label>
   <small>A dorm or an office shares one address. Lower it only if one address is hogging seats.</small>
+  <h2>Spending guard</h2>
+  <label>Daily budget in dollars, estimated (0 = no limit) <input id="perDay" type="number" step="any" min="0"></label>
+  <small>Cloudflare has no spending cap, so the game keeps its own estimate of today's bill (UTC day: it starts over at 7 pm Eastern). Past the budget nobody new gets into the shared dig (they dig a practice pile). Past twice the budget everyone is sent to practice until the day turns over. At the 4,000-player cap the game costs roughly $0.55 an hour.</small>
   <h2>Notice line</h2>
   <label>Shown at the top of everyone's screen (blank for none) <input id="notice" maxlength="140"></label>
   <button type="submit">Save</button>
@@ -68,7 +71,7 @@
 <script>
 const $ = (id) => document.getElementById(id);
 // Every number on the form. The HAND ones show only what was set by hand (blank = the game's own number, shown greyed).
-const NUMS = ['burst', 'max', 'min', 'finishBy', 'target', 'lead', 'boost', 'bombAt', 'maxPlayers', 'perIp'], HAND = ['maxPlayers', 'perIp'];
+const NUMS = ['burst', 'max', 'min', 'finishBy', 'target', 'lead', 'boost', 'bombAt', 'maxPlayers', 'perIp', 'perDay'], HAND = ['maxPlayers', 'perIp'];
 let names = [];
 try { $('key').value = localStorage.getItem('admin-key') || ''; } catch (e) {}
 const local = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
@@ -106,6 +109,7 @@ function show(d, fill) {
     + `\n\n${d.online} online in ${d.rooms} room(s); room for ${c.maxPlayers}, ${c.perIp} per network address per room\nmounds open: ${d.moundsOpen} (${d.waves} opened so far)`
     + `\n${d.tot.toLocaleString()} m3 dug by everyone, ever; ${d.calls.toLocaleString()} calls to Congress logged`
     + `\ndirt bombs: ${d.bombs ?? 0} dropped` + (d.bomb ? `, one landing on ${names[d.bomb.i]} (${d.bomb.lobby}) in ${Math.max(0, d.bomb.hit / 1000).toFixed(0)} s` : '') + (d.lastBomb ? `; last one ${new Date(d.lastBomb).toLocaleTimeString()}` : '')
+    + (d.spend ? `\nestimated spend today (${d.spend.day}, UTC): $${d.spend.usd.toFixed(2)} of $${c.perDay} budget` + ['', ': OVER BUDGET, nobody new is seated', ': FAR OVER BUDGET, shared dig closed until the day turns over'][d.spend.limited] : '')
     + (d.flushedAt ? `\nlast "save everyone now": ${new Date(d.flushedAt).toLocaleTimeString()}` : '');
 }
 $('load').onclick = async () => show(await call(), true);
