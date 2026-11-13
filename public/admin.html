@@ -108,7 +108,7 @@ function show(d, fill) {
     loaded = read();
   }
   $('now').textContent = d.giants.map((g, i) => `${g.name}: ${(g.progress * 100).toFixed(2)}% dug, ${g.active ? 'active' : g.done ? 'dug out' : 'closed'}\n  ${(d.ahead[i] * 100).toFixed(2)}% ${d.ahead[i] < 0 ? 'behind' : 'ahead of'} schedule, about ${d.diggers[i].toFixed(1)} digging\n  needs ${d.needPerSec[i].toFixed(4)} m3/s to finish on time; a crowd of shovels may take ${d.speed[i].toFixed(4)} m3/s right now\n  one bite: shovel x${d.shovelMul[i].toPrecision(3)} of its normal depth, top machine x${d.topMul[i].toPrecision(3)}`).join('\n')
-    + `\n\n${d.online} online in ${d.rooms} room(s); room for ${c.maxPlayers}, ${c.perIp} per network address per room\nmounds open: ${d.moundsOpen} (${d.waves} opened so far)`
+    + `\n\n${d.online} online in ${d.rooms} room(s)` + (d.peak ? ` (most ever at once: ${d.peak}, ${new Date(d.peakAt).toLocaleString()})` : '') + `; room for ${c.maxPlayers}, ${c.perIp} per network address per room\nmounds open: ${d.moundsOpen} (${d.waves} opened so far)`
     + `\n${d.tot.toLocaleString()} m3 dug by everyone, ever; ${d.calls.toLocaleString()} calls to Congress logged`
     + `\ndirt bombs: ${d.bombs ?? 0} dropped` + (d.bomb ? `, one landing on ${names[d.bomb.i]} (${d.bomb.lobby}) in ${Math.max(0, d.bomb.hit / 1000).toFixed(0)} s` : '') + (d.lastBomb ? `; last one ${new Date(d.lastBomb).toLocaleTimeString()}` : '')
     + (d.spend ? `\nestimated spend today (${d.spend.day}, UTC): $${d.spend.usd.toFixed(2)} of $${c.perDay} budget` + ['', ': OVER BUDGET, nobody new is seated', ': FAR OVER BUDGET, shared dig closed until the day turns over'][d.spend.limited] : '')

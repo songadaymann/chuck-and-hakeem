@@ -29,6 +29,7 @@ export class World extends DurableObject {
     this.since = each(Date.now());   // when each man's current schedule began (pacing aims at a fixed finish time)
     this.rebuild();
     this.spend = { day: dayOf(Date.now()), usd: 0 };   // today's estimated bill (CFG.cost)
+    this.peak = { n: 0, at: 0 };   // the most people ever in the shared dig at once, and when
     this.base = each(0);             // ...and how far out he already was at that moment
     // q: real cubic metres one digger-second is worth on each pile right now. diggers: how many people were at it lately.
     this.q = each(0); this.diggers = each(0); this.work = each(0); this.real = each(0);
@@ -47,7 +48,7 @@ export class World extends DurableObject {
     this.flush = 0; this.foldAt = 0;
     this.dirty = false; this.alarmSet = false;
     ctx.blockConcurrencyWhile(async () => {
-      const saved = await ctx.storage.get(['g0', 'g1', 't0', 't1', 'm2', 'over', 'since', 'base', 'for', 'left', 'tot', 'calls', 'bomb', 'spend']);
+      const saved = await ctx.storage.get(['g0', 'g1', 't0', 't1', 'm2', 'over', 'since', 'base', 'for', 'left', 'tot', 'calls', 'bomb', 'spend', 'peak']);
       this.grids.forEach((g, i) => {
         const t = saved.get('t' + i), cm = saved.get('g' + i);
         if (t) {   // thickness in metres, as floats
@@ -70,6 +71,8 @@ export class World extends DurableObject {
         if (Array.isArray(bm.gen)) bm.gen.forEach((v, i) => { if (i < this.gen.length && Number.isInteger(v)) this.gen[i] = v; });
         this.bombs = fin(bm.bombs, 0, 1e9) ?? 0; this.lastBomb = fin(bm.last, 0, 1e14) ?? 0;
       }
+      const pk = saved.get('peak');
+      if (pk && typeof pk === 'object') this.peak = { n: fin(pk.n, 0, 1e7) ?? 0, at: fin(pk.at, 0, 1e14) ?? 0 };
       const sp = saved.get('spend');
       if (sp && sp.day === this.spend.day) this.spend.usd = fin(sp.usd, 0, 1e9) ?? 0;
       const s = saved.get('since');
@@ -217,6 +220,8 @@ export class World extends DurableObject {
   sync(room, count, since, ops, hits, calls = 0) {
     const now = Date.now(), vols = new Array(ops.length).fill(0), c = this.ctl;
     const here = this.report(room, count, now);
+    const on = this.online();
+    if (on > this.peak.n) { this.peak = { n: on, at: now }; this.dirty = true; }
     if (calls >= 1) { this.calls += Math.min(Math.floor(calls), 3 * N.roomSize); this.dirty = true; }
     this.tune(now);
     this.bombTick(now);
@@ -291,7 +296,11 @@ export class World extends DurableObject {
     }
     const c = this.ctl;
     if (!(c.bombAt > 0) || now - this.lastBomb < c.bombEvery * 60000 || this.online() === 0) return;
-    for (let i = 0; i < this.grids.length; i++) if (this.auto(i) && this.active(i, now) && this.ahead(i, now) > c.bombAt) { this.startBomb(i, now, false); return; }
+    // the pile furthest ahead of its own schedule gets it (not simply the first in the list: that one would be bombed
+    // every other time while the other, as far or further ahead, waited twice as long)
+    let pick = -1, most = c.bombAt;
+    for (let i = 0; i < this.grids.length; i++) { const a = this.ahead(i, now); if (this.auto(i) && this.active(i, now) && a > most) { pick = i; most = a; } }
+    if (pick >= 0) this.startBomb(pick, now, false);
   }
   // The lobbies take turns: whoever is next in CFG.lobbies drops this one. The size is set now, from how far ahead the
   // pile is (a bomb from the switch is always the most a bomb may be).
@@ -343,7 +352,7 @@ export class World extends DurableObject {
     this.dirty = false;
     try {
       const put = { m2: { hp: this.mounds, waves: this.waves, quiet: this.quiet }, left: this.grids.map((g) => g.left), tot: this.tot, calls: this.calls,
-        bomb: { gen: this.gen, bombs: this.bombs, last: this.lastBomb }, spend: this.spend };
+        bomb: { gen: this.gen, bombs: this.bombs, last: this.lastBomb }, spend: this.spend, peak: this.peak };
       this.grids.forEach((g, i) => { put['t' + i] = Float32Array.from(g.h, (v, k) => v - g.floor[k]).buffer; });
       await this.ctx.storage.put(put);
     } catch (e) {
@@ -411,6 +420,6 @@ export class World extends DurableObject {
     this.tune(now);   // so the digger counts fall to nothing when everyone has gone home
     return { online: this.online(), rooms: this.rooms.size, tot: Math.round(this.tot), dg: this.diggers.map(Math.round), calls: this.calls,
       giants: this.grids.map((g, i) => ({ name: g.giant.name, progress: +g.progress.toFixed(4), done: g.done, state: this.ctl.state[i], deadline: new Date(this.ctl.deadline[i]).toISOString(), active: this.active(i, now) })),
-      moundsOpen: this.mounds.filter((h) => h > 0).length, limited: this.limited(now) };
+      moundsOpen: this.mounds.filter((h) => h > 0).length, limited: this.limited(now), peak: this.peak.n, peakAt: this.peak.at ? new Date(this.peak.at).toISOString() : null };
   }
 }
