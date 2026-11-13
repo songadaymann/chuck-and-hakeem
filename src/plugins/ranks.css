@@ -1,0 +1,6 @@
+#record { margin: 6px 0; line-height: 1.5; }
+#record .rank { color: #ffc21a; font-weight: 700; }
+#record .counts span { margin-right: 10px; white-space: nowrap; }
+#record .badges { margin-top: 3px; display: flex; flex-wrap: wrap; gap: 4px; }
+#record .badge { border: 1px solid #ffc21a; color: #ffc21a; padding: 0 4px; font-size: .85em; white-space: nowrap; }
+#record .next { opacity: .75; font-size: .9em; }

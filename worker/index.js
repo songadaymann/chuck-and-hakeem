@@ -16,8 +16,13 @@ const MOUNT = '/leave';
 // script on mann.cool, pinned to the version the site serves now; it counts one play when it loads. The bare
 // workers.dev address stays the game alone.
 const HOME = 'https://mann.cool';
-// One leaderboard board, "Dirt moved": each player's lifetime total (src/board.js posts it; games.json declares it).
-const BOARDS = [{ variant: 'dirt', label: 'Dirt moved', metric: 'dirtM3', metricLabel: 'Cubic metres of dirt moved', direction: 'desc', display: 'integer', aggregation: 'player-best', minimumMatches: 1 }];
+// The leaderboards (src/board.js posts to them; games.json on mann.cool declares them).
+// Three boards (the same as games.json on mann.cool declares): dirt dug, lobbyists stopped, nests flattened.
+const BOARDS = [
+  { variant: 'dirt', label: 'Dirt moved', metric: 'dirtM3', metricLabel: 'Cubic metres of dirt moved', direction: 'desc', display: 'integer', aggregation: 'player-best', minimumMatches: 1 },
+  { variant: 'lobbyists', label: 'Lobbyists stopped', metric: 'lobbyists', metricLabel: 'Lobbyists stopped', direction: 'desc', display: 'integer', aggregation: 'player-best', minimumMatches: 1 },
+  { variant: 'nests', label: 'Nests flattened', metric: 'nests', metricLabel: 'Lobby nests flattened', direction: 'desc', display: 'integer', aggregation: 'player-best', minimumMatches: 1 },
+];
 const SHELL = { slug: 'leave', title: "Chuck & Hakeem Won't Leave", leaderboard: true, limit: 100, version: '20261113-boardlimit1' };
 const SHELL_PATH = '/platform/v1/game-shell.js';
 const attr = (v) => String(v).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');

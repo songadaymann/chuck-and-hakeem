@@ -33,6 +33,21 @@ export const CFG = {
     { id: 'mining_shovel', name: 'Mining Shovel', kind: 'vehicle', need: 490000, r: 8, depth: 3.5, period: 4.4, bite: 0.3, reach: 11, speed: 5, dmg: 50, cam: 36, turn: 1.2 },
     { id: 'bucket_wheel_excavator', name: 'Bucket-Wheel Excavator', kind: 'vehicle', need: 1600000, r: 10, depth: 1.0, period: 0.5, bite: 0.5, reach: 36, speed: 4, dmg: 40, cam: 85, turn: 0.8, moveDig: true, loopClip: true },
   ],
+  // Your rank, one for each tool tier above, shown under your name tag.
+  ranks: ['Concerned Citizen', 'Volunteer', 'Canvasser', 'Phone Banker', 'Precinct Captain', 'Organizer', 'Union Steward', 'Ward Boss', 'Campaign Manager', 'Primary Challenger'],
+  // Past the top machine: a new paint job for the Bucket-Wheel at each of these lifetime totals (m3), and a star on your
+  // name tag for each. They come slowly on purpose; the last one is rainbow.
+  paints: [
+    { at: 2.5e6, name: 'Fire Engine Red', color: '#e0342b' }, { at: 4e6, name: 'Royal Blue', color: '#3a6be0' },
+    { at: 6e6, name: 'Kelly Green', color: '#2fb352' }, { at: 8.5e6, name: 'Grape', color: '#8a46d6' },
+    { at: 11.5e6, name: 'Hot Pink', color: '#ff58b0' }, { at: 15e6, name: 'Gold Leaf', color: '#f0c020' },
+    { at: 20e6, name: 'Rainbow', rainbow: true },
+  ],
+  // Badges, at these counts. kills = lobbyists you stopped (swatted, dug or run over), nests = open mounds that fell
+  // after you hit them, saves = lobbyists you stopped that were after somebody else. The room counts them (at most
+  // killRate a second, banking up to killBank) and they are saved with your code.
+  badges: { kills: [10, 100, 1000, 10000, 50000], nests: [1, 10, 50, 200, 1000], saves: [10, 100, 1000, 5000] },
+  stats: { killRate: 3, killBank: 30, nestWindowSec: 900 },
   // shuffle = how fast you can edge sideways while digging with a hand tool (share of walking speed); grace = seconds nothing can hit you after a respawn
   player: { hp: 100, runMul: 1.5, regenDelay: 3, regen: 4, respawn: 3, shuffle: 0.4, grace: 4 },
   // How digging looks. The shared pile is paced to last until the vote, so one bite takes a sliver off it; the rest of
@@ -137,6 +152,8 @@ export const lobbyStep = (p) => {
 export const hivesOpen = (pMax, online) => lobbyStep(pMax).hives + (online >= CFG.lobby.crowdHive ? 1 : 0);
 // 0 for a lone digger, 1 at crowdFull, counted in doublings.
 export const crowdShare = (diggers) => Math.max(0, Math.min(1, Math.log2(Math.max(1, diggers || 0)) / Math.log2(CFG.lobby.ramp.crowdFull)));
+export const starsFor = (dug) => CFG.paints.filter((p) => dug >= p.at).length;
+export const rankFor = (tier, stars) => CFG.ranks[Math.min(tier, CFG.ranks.length - 1)] + (stars ? ' ' + '\u2605'.repeat(stars) : '');
 export const tierFor = (dug) => { let t = 0; while (t + 1 < CFG.tools.length && dug >= CFG.tools[t + 1].need) t++; return t; };
 export const randomName = () => `${CFG.nameA[Math.floor(Math.random() * CFG.nameA.length)]} ${CFG.nameB[Math.floor(Math.random() * CFG.nameB.length)]} ${10 + Math.floor(Math.random() * 90)}`;
 export const validName = (n) => { const m = /^(\S+) (\S+) (\d\d)$/.exec(n || ''); return !!m && CFG.nameA.includes(m[1]) && CFG.nameB.includes(m[2]); };

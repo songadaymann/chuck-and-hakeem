@@ -14,6 +14,9 @@ not throw. Positions are world metres (+Y up). The Capitol's west front faces +Z
 | `dig` | `x, y, z, r, vol, tier, tool` | that bite removed dirt; `vol` is the full-strength cubic metres credited |
 | `denied` | `x, z, left` | a bite was refused by the health-insurance deductible |
 | `toolUp` | `tier, tool, quiet` | a new tool was unlocked (`quiet`: restored on load, not earned just now) |
+| `paintUp` | `stars, paint, quiet` | past the top machine: a new star and Bucket-Wheel paint job (`paint` is from `CFG.paints`) |
+| `stats` | `st, prev` | the server's count of your `[kills, nests, saves]` (`prev`: the last one, `null` on arrival). Also in `player.stats` |
+| `badge` | `stat, at` | a badge was earned: `stat` is kills, nests or saves, `at` the count (`CFG.badges`) |
 | `hurt` | `lobby, effect, hp` | a lobbyist's shot hit you (`effect`: hasbara, deductible, pricehike, slick, buyout, tos) |
 | `dead` / `respawn` | `why, lobby?` | you went down (`why`: lobbied or pricehike) / you are back, at the foot of your pile |
 | `cheer` | `x, y, z, self?` | someone threw their arms up: you (key E, `self`) or bystanders in the scenery |

@@ -541,6 +541,8 @@ export function init(game) {
   });
   on('denied', () => { bit = null; play('denied'); });
   on('toolUp', (e) => { if (!e.quiet) upTier = Math.max(upTier, e.tier); });   // several at once: one fanfare, for the best of them (see update)
+  on('paintUp', (e) => { if (!e.quiet) upTier = Math.max(upTier, game.player.tier); });   // a new paint job gets the top machine's fanfare
+  on('badge', () => play('woo'));
   on('hurt', (e) => play(e.effect));
   on('dead', () => play('dead'));
   on('respawn', () => play('respawn'));
