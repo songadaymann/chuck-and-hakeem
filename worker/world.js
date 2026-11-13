@@ -401,6 +401,11 @@ export class World extends DurableObject {
       if (fin(patch.tot, 0, 1e15) !== null) this.tot = patch.tot;
       if (fin(patch.calls, 0, 1e12) !== null) this.calls = Math.floor(patch.calls);
       if (patch.flush === true) this.flush = Date.now();
+      // the admin page's player count (see /api/admin count), kept so the page can show it again later
+      if (patch.counted && fin(patch.counted.codes, 0, 1e9) !== null && fin(patch.counted.digging, 0, 1e9) !== null) {
+        this.counted = { codes: patch.counted.codes, digging: patch.counted.digging, at: Date.now() };
+        await this.ctx.storage.put('counted', this.counted);
+      }
       // "drop one now", from the switch: on pile 0 or 1, whatever the schedule says (but never two at once)
       if (Number.isInteger(patch.bomb) && this.grids[patch.bomb] && !this.bomb && this.active(patch.bomb, Date.now())) this.startBomb(patch.bomb, Date.now(), true);
       await this.ctx.storage.put({ over: this.over, since: this.since, base: this.base, for: this.ctl.deadline });
@@ -409,6 +414,7 @@ export class World extends DurableObject {
     }
     const now = Date.now();
     return { ...this.status(), control: this.ctl, setByHand: this.over, codeDeadline: CFG.giants.map((g) => Date.parse(g.deadline)), flushedAt: this.flush,
+      counted: this.counted ??= (await this.ctx.storage.get('counted')) || null,
       needPerSec: this.grids.map((g, i) => this.need(i, now)), speed: this.grids.map((g, i) => this.speed(i, now)), ahead: this.grids.map((g, i) => this.ahead(i, now)), diggers: this.diggers, left: this.grids.map((g, i) => this.rem(i)),
       shovelMul: this.grids.map((g, i) => this.mul(i, 0)), topMul: this.grids.map((g, i) => this.mul(i, CFG.tools.length - 1)), moundHp: this.mounds, waves: this.waves, defaults: { ...P, bombAt: B.at, bombEvery: B.gapSec / 60, maxPlayers: N.maxPlayers, perIp: N.perIp, perDay: C.perDay },
       spend: { day: this.spend.day, usd: this.spend.usd, limited: this.limited(now), stopAt: this.ctl.perDay * C.stopMul },
