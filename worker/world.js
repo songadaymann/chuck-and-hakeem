@@ -290,7 +290,7 @@ export class World extends DurableObject {
       return;
     }
     const c = this.ctl;
-    if (!(c.bombAt > 0) || now - this.lastBomb < B.gapSec * 1000 || this.online() === 0) return;
+    if (!(c.bombAt > 0) || now - this.lastBomb < c.bombEvery * 60000 || this.online() === 0) return;
     for (let i = 0; i < this.grids.length; i++) if (this.auto(i) && this.active(i, now) && this.ahead(i, now) > c.bombAt) { this.startBomb(i, now, false); return; }
   }
   // The lobbies take turns: whoever is next in CFG.lobbies drops this one. The size is set now, from how far ahead the
@@ -356,7 +356,7 @@ export class World extends DurableObject {
   rebuild() {
     const o = this.over;
     this.ctl = { state: o.state.map((s) => s || 'play'), deadline: CFG.giants.map((g, i) => o.deadline[i] ?? Date.parse(g.deadline)), fixed: o.fixed.slice(),
-      min: o.min ?? P.min, max: o.max ?? P.max, burst: o.burst ?? P.burst, target: o.target ?? P.target, lead: o.lead ?? P.lead, boost: o.boost ?? P.boost, finishBy: o.finishBy ?? P.finishBy, bombAt: o.bombAt ?? B.at, notice: o.notice || '',
+      min: o.min ?? P.min, max: o.max ?? P.max, burst: o.burst ?? P.burst, target: o.target ?? P.target, lead: o.lead ?? P.lead, boost: o.boost ?? P.boost, finishBy: o.finishBy ?? P.finishBy, bombAt: o.bombAt ?? B.at, bombEvery: o.bombEvery ?? B.gapSec / 60, notice: o.notice || '',
       // the two crowd limits: seats in the whole game, and connections one network address may hold in one room
       maxPlayers: Math.floor(o.maxPlayers ?? N.maxPlayers), perIp: Math.floor(o.perIp ?? N.perIp),
       perDay: o.perDay ?? C.perDay };   // the spending guard's daily budget in dollars (0 = none)
@@ -376,7 +376,7 @@ export class World extends DurableObject {
       }
       if (Array.isArray(p.fixed) && i in p.fixed) o.fixed[i] = fin(p.fixed[i], 1e-9, 1000);   // anything else clears it
     });
-    for (const [k, lo, hi] of [['min', 1e-9, 1000], ['max', 1e-9, 1000], ['burst', 1, 10000], ['target', 0, 100000], ['lead', 0.001, 1], ['boost', 1, 3], ['finishBy', 0.05, 1], ['bombAt', 0, 1], ['maxPlayers', 0, 100000], ['perIp', 1, 1000], ['perDay', 0, 100000]]) {
+    for (const [k, lo, hi] of [['min', 1e-9, 1000], ['max', 1e-9, 1000], ['burst', 1, 10000], ['target', 0, 100000], ['lead', 0.001, 1], ['boost', 1, 3], ['finishBy', 0.05, 1], ['bombAt', 0, 1], ['bombEvery', 1, 100000], ['maxPlayers', 0, 100000], ['perIp', 1, 1000], ['perDay', 0, 100000]]) {
       if (p[k] === null) delete o[k]; else if (fin(p[k], lo, hi) !== null) o[k] = p[k];
     }
     if (typeof p.notice === 'string') o.notice = p.notice.replace(/[\u0000-\u001f<>]/g, ' ').slice(0, 140);
@@ -401,7 +401,7 @@ export class World extends DurableObject {
     const now = Date.now();
     return { ...this.status(), control: this.ctl, setByHand: this.over, codeDeadline: CFG.giants.map((g) => Date.parse(g.deadline)), flushedAt: this.flush,
       needPerSec: this.grids.map((g, i) => this.need(i, now)), speed: this.grids.map((g, i) => this.speed(i, now)), ahead: this.grids.map((g, i) => this.ahead(i, now)), diggers: this.diggers, left: this.grids.map((g, i) => this.rem(i)),
-      shovelMul: this.grids.map((g, i) => this.mul(i, 0)), topMul: this.grids.map((g, i) => this.mul(i, CFG.tools.length - 1)), moundHp: this.mounds, waves: this.waves, defaults: { ...P, bombAt: B.at, maxPlayers: N.maxPlayers, perIp: N.perIp, perDay: C.perDay },
+      shovelMul: this.grids.map((g, i) => this.mul(i, 0)), topMul: this.grids.map((g, i) => this.mul(i, CFG.tools.length - 1)), moundHp: this.mounds, waves: this.waves, defaults: { ...P, bombAt: B.at, bombEvery: B.gapSec / 60, maxPlayers: N.maxPlayers, perIp: N.perIp, perDay: C.perDay },
       spend: { day: this.spend.day, usd: this.spend.usd, limited: this.limited(now), stopAt: this.ctl.perDay * C.stopMul },
       bomb: this.bombNews(now), bombs: this.bombs, lastBomb: this.lastBomb, gen: this.gen };
   }

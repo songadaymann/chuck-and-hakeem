@@ -66,8 +66,10 @@ export const CFG = {
   // Dirt bombs: the lobbies' answer to a crowd that is winning too easily. Once a pile is more than `at` of itself ahead
   // of schedule, the next lobby in line airdrops a sack of dirt on it, filling it back to `to` ahead (never more than
   // `most` of the pile in one go). Everything stops for it: from the warning to `stormSec` later nobody can dig.
-  // gapSec = the least time between two bombs, anywhere. `at` can be changed live from /admin.html (0 = no bombs).
-  bomb: { at: 0.05, to: 0, most: 0.05, gapSec: 14400, warnSec: 7, stormSec: 13 },
+  // gapSec = the least time between two bombs, anywhere. `at` and the gap (in minutes) can be changed live from
+  // /admin.html (at 0 = no bombs). Each bomb hands a crowd that is pinned at `lead` another `most` of the pile to dig at
+  // full speed without moving the finish date, so a shorter gap means more of the night spent visibly digging.
+  bomb: { at: 0.05, to: 0, most: 0.05, gapSec: 3600, warnSec: 7, stormSec: 13 },
   // Spending guard (worker/world.js). Cloudflare has no spending cap, so the World keeps its own running estimate of
   // today's bill (UTC day): every room-second (a room awake, plus its once-a-second call to us), every player-second
   // (two position messages a second, billed 20 to 1, plus saves), every second we are awake with someone online, and
