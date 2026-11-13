@@ -54,10 +54,23 @@ export const CFG = {
   // with nothing open for that long (and somebody digging), the next mound opens whatever the progress.
   lobby: { moundsEach: 3, moundHp: 300, spawnEvery: 20, maxPerMound: 3, lobbyistHp: 2, speed: 3.2, range: 14, stand: 2.8, cooldown: 4, shotSpeed: 13, dmg: 4, deductibleDigs: 2, tosEvery: 20, quietSec: 180,
            firstAt: 0.001, openEvery: 0.01, maxOpen: 2, meleeR: 3.4, whack: 0.38, hitMul: 4, perMound: 6,
-           // The lobbies push harder the lower the piles get and the more people are digging. heat (0..1) = pile x (share of
-           // the two piles gone) + crowd x (how busy the dig is: 0 for a lone digger, 1 at crowdFull people, counted in
-           // doublings). At heat 0 the numbers above apply, at heat 1 the ones in `at`, and in between they slide.
-           ramp: { pile: 0.6, crowd: 0.4, crowdFull: 64, at: { maxOpen: 4, spawnEvery: 10, maxPerMound: 5, speed: 4.2, cooldown: 2.8 } } },
+           // How hard the lobbies push, by how much of a pile is gone (0..1). Each row: [from, hives, per, every].
+           // hives = mounds open at once, anywhere (the server, from whichever pile is furthest gone; one more with
+           // crowdHive or more people online). per = lobbyists alive at once around one player (their own browser, from
+           // the pile nearest them). every = seconds between two lobbyists from one mound. hives steps; per and every
+           // slide from one row to the next. Jonathan's numbers for 50% and 60% (2026-11-13); the rest fill in around them.
+           steps: [[0, 2, 8, 20], [0.25, 3, 12, 16], [0.5, 3, 20, 12], [0.6, 4, 30, 9], [0.8, 5, 40, 7]],
+           crowdHive: 100,
+           // The crowd also speeds them up: spawns up to crowdFast faster once crowdFull people are digging (in doublings).
+           crowdFast: 0.5,
+           // Big machines draw them. By tool tier: how many more lobbyists (and how much faster they come), and how much
+           // further they throw (so they can hit you before you run them over). Never more than `most` around anyone,
+           // and a phone or tablet gets `touch` of everything, because each one is a whole animated person to draw.
+           tools: { n: [1, 1, 1, 1, 1.25, 1.5, 1.75, 2, 2.5, 3], range: [1, 1, 1, 1, 1, 1.2, 1.2, 1.4, 1.4, 1.6] },
+           most: 50, touch: 0.67,
+           // Walking speed and time between throws still follow heat (0..1) = pile x (share of the two piles gone) + crowd x
+           // (0 for a lone digger, 1 at crowdFull people, counted in doublings): the numbers above at 0, `at` at 1.
+           ramp: { pile: 0.6, crowd: 0.4, crowdFull: 64, at: { speed: 4.2, cooldown: 2.8 } } },
   // Pacing. Every dig is multiplied by a rate the server keeps re-tuning so each pile falls at the speed needed to
   // finish just before its deadline, given how much digging has been arriving lately (averaged over tau seconds).
   // burst = how many times faster than that the pile may go while people are actually playing; min/max bound the rate.
@@ -100,13 +113,24 @@ export function moundSpots() { return SPOTS.map(([x, z], i) => ({ i, lobby: CFG.
 export const wavesWanted = (p) => (p < CFG.lobby.firstAt ? 0 : 1 + Math.floor((p - CFG.lobby.firstAt) / CFG.lobby.openEvery));
 // How hard the lobbies are pushing (0..1), from the share of the two piles gone and how many people are digging them.
 export const lobbyHeat = (p, diggers) => { const R = CFG.lobby.ramp; return Math.max(0, Math.min(1, R.pile * Math.max(0, Math.min(1, p)) + R.crowd * Math.log2(Math.max(1, diggers || 0)) / Math.log2(R.crowdFull))); };
-// The lobby numbers that change with heat, at this heat. The two counts are whole numbers.
+// The lobby numbers that change with heat (walking speed, time between throws), at this heat.
 export const lobbyAt = (heat) => {
   const L = CFG.lobby, o = {};
   for (const k in L.ramp.at) o[k] = L[k] + (L.ramp.at[k] - L[k]) * heat;
-  o.maxOpen = Math.round(o.maxOpen); o.maxPerMound = Math.round(o.maxPerMound);
   return o;
 };
+// The row of CFG.lobby.steps for a pile this far gone (0..1): { hives, per, every }.
+export const lobbyStep = (p) => {
+  const S = CFG.lobby.steps, q = Math.max(0, Math.min(1, p || 0));
+  let i = 0;
+  while (i + 1 < S.length && q >= S[i + 1][0]) i++;
+  const a = S[i], b = S[i + 1] || a, t = b === a ? 0 : (q - a[0]) / (b[0] - a[0]);
+  return { hives: a[1], per: a[2] + (b[2] - a[2]) * t, every: a[3] + (b[3] - a[3]) * t };
+};
+// Mounds that may be open at once, from the pile furthest gone (0..1) and how many people are online.
+export const hivesOpen = (pMax, online) => lobbyStep(pMax).hives + (online >= CFG.lobby.crowdHive ? 1 : 0);
+// 0 for a lone digger, 1 at crowdFull, counted in doublings.
+export const crowdShare = (diggers) => Math.max(0, Math.min(1, Math.log2(Math.max(1, diggers || 0)) / Math.log2(CFG.lobby.ramp.crowdFull)));
 export const tierFor = (dug) => { let t = 0; while (t + 1 < CFG.tools.length && dug >= CFG.tools[t + 1].need) t++; return t; };
 export const randomName = () => `${CFG.nameA[Math.floor(Math.random() * CFG.nameA.length)]} ${CFG.nameB[Math.floor(Math.random() * CFG.nameB.length)]} ${10 + Math.floor(Math.random() * 90)}`;
 export const validName = (n) => { const m = /^(\S+) (\S+) (\d\d)$/.exec(n || ''); return !!m && CFG.nameA.includes(m[1]) && CFG.nameB.includes(m[2]); };
