@@ -39,7 +39,9 @@
   <small>1.28 makes the top machine about 9 times a shovel. 1 makes every tool equal.</small>
   <h2>Dirt bombs</h2>
   <label>Drop one when a pile gets this far ahead of its schedule (fraction of the pile, 0.05 = 5%; 0 = never) <input id="bombAt" type="number" step="any" min="0" max="1"></label>
-  <small>The next lobby in line airdrops dirt back on, bringing the pile back to its schedule, at most 5% of it per bomb, at most one bomb every 4 hours. Digging stops for 13 seconds. Keep "furthest ahead" above this, or the pile never gets far enough ahead to set one off.</small>
+  <small>The next lobby in line airdrops dirt back on, bringing the pile back to its schedule, at most 5% of it per bomb. Digging stops for 13 seconds. Keep "furthest ahead" above this, or the pile never gets far enough ahead to set one off.</small>
+  <label>Least time between two bombs, on either pile (minutes) <input id="bombEvery" type="number" step="any" min="1"></label>
+  <small>Each bomb gives a crowd that has caught up with its limit another 5% of the pile to dig at full speed, without moving the finish date. Shorter = more of the night spent visibly digging (and more bombs).</small>
   <h2>Crowd</h2>
   <label>Most players in the shared dig at once (blank = the game's own number) <input id="maxPlayers" type="number" step="1" min="0"></label>
   <small>Everyone past this digs a private practice pile until a spot opens. Raise it in steps while watching the numbers below. 0 closes the shared dig to newcomers.</small>
@@ -71,7 +73,7 @@
 <script>
 const $ = (id) => document.getElementById(id);
 // Every number on the form. The HAND ones show only what was set by hand (blank = the game's own number, shown greyed).
-const NUMS = ['burst', 'max', 'min', 'finishBy', 'target', 'lead', 'boost', 'bombAt', 'maxPlayers', 'perIp', 'perDay'], HAND = ['maxPlayers', 'perIp'];
+const NUMS = ['burst', 'max', 'min', 'finishBy', 'target', 'lead', 'boost', 'bombAt', 'bombEvery', 'maxPlayers', 'perIp', 'perDay'], HAND = ['maxPlayers', 'perIp'];
 let names = [];
 try { $('key').value = localStorage.getItem('admin-key') || ''; } catch (e) {}
 const local = (ms) => { const d = new Date(ms - new Date(ms).getTimezoneOffset() * 60000); return d.toISOString().slice(0, 16); };
