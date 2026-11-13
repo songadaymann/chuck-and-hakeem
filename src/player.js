@@ -1,10 +1,32 @@
 import * as THREE from 'three';
 import { CFG } from './config.js';
 import { Avatar } from './avatar.js';
+import { worldH } from '../shared/terrain.js';
 
 const P = CFG.player, L = CFG.lobby;
 const angDiff = (a, b) => Math.atan2(Math.sin(a - b), Math.cos(a - b));
 const DENIED = ['CLAIM DENIED', 'OUT OF NETWORK', 'PRIOR AUTHORIZATION REQUIRED', 'NOT A COVERED DIG'];
+const G = CFG.giant, C = CFG.capitol;
+
+// Walls for walking that the height map does not have. Walking only: the dirt floor (shared/grid.js) is shared with
+// the server, and changing its shape would change how big each pile is.
+// 1. The parts of each bust that stand out past that floor's torso and head (measured from the models): the forearms,
+//    a ledge the width of the body and about 16 m up, reaching 7 m in front of the chest, and the face, which comes
+//    3 m further forward than the round head. Only while the man is there to bump into, and moving with him.
+function bodyTop(game, x, z) {
+  for (const gi of game.giants) {
+    if (!gi.root?.visible) continue;
+    const c = gi.cfg, dx = x - c.x, dz = z - c.z, up = gi.root.position.y - G.baseY;
+    if (Math.abs(dx) < G.torsoRX && dz > G.torsoRZ && dz < G.torsoRZ + 7.1) return G.baseY + 13 + up;
+    if ((dx / G.headR) ** 2 + ((dz - 1.5) / (G.headR + 2)) ** 2 < 1) return G.baseY + G.height - 0.5 + up;
+  }
+  return -Infinity;
+}
+// 2. The Capitol's roofs. Its walls already stop you, but the piles are taller than the roofs, so from the top of one
+//    you could walk out over the building. Bare roof is closed; roof with dirt still on it stays open (some of each
+//    pile spilled onto the roofs and has to be dug like the rest).
+const roofAt = (x, z) => Math.abs(x) <= C.halfX && Math.abs(z) <= C.halfZ && !CFG.giants.some((c) => Math.abs(x - c.x) <= C.notchHalfX && z >= C.notchBackZ);
+const bareRoof = (game, x, z) => roofAt(x, z) && game.surface(x, z) - worldH(x, z) < 0.3;
 
 // You: movement, digging, health and status effects. What you look like lives in Avatar.
 export class Player {
@@ -126,8 +148,10 @@ export class Player {
     if (d < 1e-5) return;
     // game.solids: buildings you cannot walk through, as { x0, x1, z0, z1 } (added by the scenery)
     // (a building you are somehow already inside does not hold you: nobody is ever sealed in)
-    const px = this.pos.x, pz = this.pos.z;
-    const ok = (x, z) => x * x + z * z < CFG.worldRadius ** 2 && g.surface(x, z) - this.pos.y < 0.5 + d * 2.5 && !g.solids.some((b) => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1 && !(px > b.x0 && px < b.x1 && pz > b.z0 && pz < b.z1));
+    // (the same goes for the walls below: anyone already standing in one can walk out of it)
+    const px = this.pos.x, pz = this.pos.z, inBody = g.surface(px, pz) < bodyTop(g, px, pz) - 0.5, onBare = bareRoof(g, px, pz);
+    const ok = (x, z) => x * x + z * z < CFG.worldRadius ** 2 && g.surface(x, z) - this.pos.y < 0.5 + d * 2.5 && !g.solids.some((b) => x > b.x0 && x < b.x1 && z > b.z0 && z < b.z1 && !(px > b.x0 && px < b.x1 && pz > b.z0 && pz < b.z1))
+      && (inBody || g.surface(x, z) >= bodyTop(g, x, z) - 0.5) && (onBare || !bareRoof(g, x, z));
     if (ok(this.pos.x + dx, this.pos.z + dz)) { this.pos.x += dx; this.pos.z += dz; }
     else if (ok(this.pos.x + dx, this.pos.z)) this.pos.x += dx;
     else if (ok(this.pos.x, this.pos.z + dz)) this.pos.z += dz;
