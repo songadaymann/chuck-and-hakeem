@@ -4,7 +4,7 @@ import { ps1ify, textTex } from './ps1.js';
 import { person, model, attach } from './assets.js';
 import { worldH } from './world.js';
 
-const L = CFG.lobby;
+const L = CFG.lobby, S = L.share;
 const TOUCH = matchMedia('(pointer: coarse)').matches;
 const BEAM = new THREE.BoxGeometry(1.6, 150, 1.6);
 const BONK = ['BONK', 'THWACK', 'NO COMMENT', 'DECLINED', 'POW', 'I WILL CIRCLE BACK', 'PER MY LAST EMAIL', 'BILLABLE!'];
@@ -21,7 +21,9 @@ const PAPER = [0xffffff, 0xe8e0c8, 0xd9d2bb];
 const glowMat = {};
 
 // Lobby mounds are dotted around the grounds but stay shut until the dig alarms them. An open mound keeps sending
-// lobbyists at you until it is flattened. Mound health is shared; the lobbyists themselves are yours alone.
+// lobbyists at you until it is flattened. Mound health is shared, and so are the lobbyists: each browser sends its own
+// player's (and walks them), tells the room, and draws the ones sent after the people near it as "mirrors" that walk
+// toward their owner. Anyone can swat any of them; the kill is passed round (CFG.lobby.share).
 // They come thicker and faster the lower the pile nearest you is and the more people are digging (CFG.lobby.steps),
 // and thicker still, throwing from further off, the bigger your machine; they walk faster and throw more often with heat.
 export class Lobby {
@@ -29,6 +31,7 @@ export class Lobby {
     this.game = game;
     this.mounds = []; this.agents = []; this.shots = [];
     this.spawning = 0; this.waves = 0; this.waveT = 0;
+    this.own = 0; this.mirrors = 0; this.seq = 0; this.company = 0;   // our own lobbyists, other people's we draw, the last id we gave out, people beside us
     this.heat = 0; this.heatT = 1; this.now = lobbyAt(0);   // now = the lobby numbers at the current heat
     this.hives = L.steps[0][1]; this.per = L.steps[0][2]; this.perMound = this.per; this.every = L.steps[0][3]; this.range = L.range;
   }
@@ -81,26 +84,53 @@ export class Lobby {
   // The server's word on every mound (or a practice save).
   apply(list, quiet) { if (list) for (const m of this.mounds) this.set(m, list[m.i] || 0, quiet); }
 
-  async spawn(m) {
-    if (this.spawning > 3) return;
+  // from: a lobbyist someone else's browser sent ({ owner: their sid, id, suit }), to draw here as a mirror.
+  async spawn(m, from) {
+    if (this.spawning > (from ? 6 : 3)) return;
     this.spawning++;
-    const who = CFG.suits[(m.i + (m.alive % 2) * 3) % CFG.suits.length];   // two faces per mound, so their files are soon cached
-    const p = await person(who) || await person('Male_Adult_01');
+    const suit = from ? from.suit : (m.i + (m.alive % 2) * 3) % CFG.suits.length;   // two faces per mound, so their files are soon cached
+    const p = await person(CFG.suits[suit]) || await person('Male_Adult_01');
     this.spawning--;
-    if (!p || m.hp <= 0) return;
+    if (!p || m.hp <= 0 || (from && !this.mirrorOk(from.owner))) return;
     const hand = p.bone('L_Hand');
     if (hand && this.briefcase) attach(hand, this.briefcase.root.clone());
     const a = { p, m, lobby: m.lobby, hp: L.lobbyistHp, cd: 1 + Math.random() * 2, kb: new THREE.Vector3(),
-      pos: new THREE.Vector3(m.x + Math.sin(m.root.rotation.y) * 5.5, 0, m.z + Math.cos(m.root.rotation.y) * 5.5), yaw: m.root.rotation.y };
+      pos: new THREE.Vector3(m.x + Math.sin(m.root.rotation.y) * 5.5, 0, m.z + Math.cos(m.root.rotation.y) * 5.5), yaw: m.root.rotation.y,
+      owner: from ? from.owner : 0, id: from ? from.id : (this.seq = this.seq % 65535 + 1), born: performance.now() };
     a.pos.y = this.game.surface(a.pos.x, a.pos.z);
-    m.alive++;
+    if (from) this.mirrors++; else { m.alive++; this.own++; this.game.net?.spawned(a.id, m.i, suit); }
     this.game.scene.add(p.root);
     this.agents.push(a);
     const lines = BARKS[m.lobby.id];
-    if (lines && a.pos.distanceTo(this.game.player.pos) < 45) this.game.hud.say(lines[Math.floor(Math.random() * lines.length)], a.pos.x, a.pos.y + 2.6, a.pos.z, 3.5, 'lobby');
+    if (lines && !from && a.pos.distanceTo(this.game.player.pos) < 45) this.game.hud.say(lines[Math.floor(Math.random() * lines.length)], a.pos.x, a.pos.y + 2.6, a.pos.z, 3.5, 'lobby');
     this.game.puff(a.pos.x, a.pos.y + 0.5, a.pos.z, 6, 1.5);
     this.game.bus.emit('agentSpawn', { agent: a, mound: m, lobby: m.lobby });
   }
+
+  // Room news: someone's browser sent a lobbyist after them. Drawn here only if they are close and we have room for it.
+  mirrorOk(owner) {
+    const g = this.game, r = g.net?.remotes.get(owner);
+    return !!r && this.mirrors < (TOUCH ? S.mirrorsTouch : S.mirrors) && Math.hypot(r.tx - g.player.pos.x, r.tz - g.player.pos.z) < S.mirrorR;   // where they last said they are
+  }
+  mirror(owner, id, mi, suit) {
+    const m = this.mounds[mi];
+    if (owner === this.game.net?.sid || !m || m.hp <= 0 || !CFG.suits[suit] || !this.mirrorOk(owner)) return;
+    this.spawn(m, { owner, id, suit });
+  }
+  // Room news: player `by` swatted lobbyist `id` that was after player `owner` (it may be ours, or a mirror we draw).
+  netKill(owner, id, by) {
+    const g = this.game, me = g.net?.sid, mine = owner === me;
+    if (by === me) return;
+    const a = this.agents.find((x) => x.id === id && (mine ? !x.owner : x.owner === owner));
+    if (!a || a.hp <= 0) return;
+    const r = g.net.remotes.get(by), near = a.pos.distanceTo(g.player.pos) < 45;
+    a.hp = 0; a.netDead = true; a.flash = 0.15;
+    a.kb.set(a.pos.x - (r ? r.pos.x : a.pos.x - 1), 0, a.pos.z - (r ? r.pos.z : a.pos.z)).setLength(7);
+    if (near) g.hud.pop(mine && r ? `${r.name.toUpperCase()}!` : BONK[Math.floor(Math.random() * BONK.length)], a.pos.x, a.pos.y + 2.2, a.pos.z, mine ? 'loud' : '');
+    g.bus.emit('remoteWhack', { agent: a, sid: by, name: r?.name || '', mine, near, x: a.pos.x, y: a.pos.y, z: a.pos.z });
+  }
+  // Forget the mirrors of one player who left (or everyone's, when we lose the room).
+  dropMirrors(sid) { for (let i = this.agents.length - 1; i >= 0; i--) { const a = this.agents[i]; if (a.owner && (sid === undefined || a.owner === sid)) this.remove(a, i, true); } }
 
   // The player's tool landed here. Anyone in a suit under it is done for; mounds in reach take the tool's damage.
   strike(x, z, r, dmg, bought) {
@@ -158,12 +188,15 @@ export class Lobby {
     }
   }
 
-  remove(a, i) {
+  remove(a, i, quiet) {
     const g = this.game;
-    g.puff(a.pos.x, a.pos.y + 1, a.pos.z, 8, 1.2, PAPER);   // a flurry of paperwork
-    g.bus.emit('agentDown', { agent: a, lobby: a.lobby, x: a.pos.x, y: a.pos.y, z: a.pos.z });
+    if (!quiet) {
+      g.puff(a.pos.x, a.pos.y + 1, a.pos.z, 8, 1.2, PAPER);   // a flurry of paperwork
+      g.bus.emit('agentDown', { agent: a, lobby: a.lobby, x: a.pos.x, y: a.pos.y, z: a.pos.z });
+    }
     a.p.root.traverse((o) => { if (o.isSkinnedMesh) o.skeleton.dispose(); });
-    g.scene.remove(a.p.root); a.m.alive--; this.agents.splice(i, 1);
+    g.scene.remove(a.p.root); this.agents.splice(i, 1);
+    if (a.owner) this.mirrors--; else { a.m.alive--; this.own--; }
   }
 
   update(dt) {
@@ -176,7 +209,12 @@ export class Lobby {
       const near = g.fields.reduce((b, f) => (!b || Math.hypot(target.x - f.giant.x, target.z - f.giant.z) < Math.hypot(target.x - b.giant.x, target.z - b.giant.z) ? f : b), null);
       const step = lobbyStep(near ? near.progress / CFG.dirt.doneAt : 0), T = L.tools, t = Math.min(pl.toolIndex | 0, T.n.length - 1);
       const open = Math.max(1, this.moundsLeft);
-      this.per = Math.max(1, Math.round(Math.min(L.most, step.per * T.n[t]) * (TOUCH ? L.touch : 1)));
+      // ...and who is beside you: on your own you get `alone` of a swarm, all of it with `full` others to share it
+      let others = 0;
+      if (g.net?.online) for (const r of g.net.remotes.values()) if (!(r.flags & 4) && Math.hypot(r.pos.x - target.x, r.pos.z - target.z) < S.near) others++;
+      this.company = others;
+      const share = S.alone + (1 - S.alone) * Math.min(1, others / S.full);
+      this.per = Math.max(1, Math.round(Math.min(L.most, step.per * T.n[t]) * share * (TOUCH ? L.touch : 1)));
       this.perMound = Math.ceil(this.per / open);
       this.every = step.every / T.n[t] / (1 + L.crowdFast * crowdShare(diggers));
       this.range = L.range * T.range[t];
@@ -192,22 +230,26 @@ export class Lobby {
       }
       if (m.hp <= 0) continue;
       m.timer -= dt;
-      if (m.timer <= 0) { m.timer = this.every; if (m.alive < this.perMound && this.agents.length < this.per) this.spawn(m); }
+      if (m.timer <= 0) { m.timer = this.every; if (m.alive < this.perMound && this.own < this.per) this.spawn(m); }
     }
     // a machine on the move flattens anyone it touches
     const runR = pl.inVehicle && pl.vel.length() > 1.5 ? Math.min(6, 1.6 + pl.toolCfg.r * 0.35) : 0;
     for (let i = this.agents.length - 1; i >= 0; i--) {
-      const a = this.agents[i];
+      const a = this.agents[i], r = a.owner ? g.net?.remotes.get(a.owner) : null;
       if (a.m.hp <= 0 && a.fly === undefined) { this.remove(a, i); continue; }   // when the mound goes, so do its people
+      // a mirror whose owner left, wandered off, or whose end we never heard of
+      if (a.owner && a.fly === undefined && (!r || performance.now() - a.born > S.mirrorLife * 1000 || Math.hypot(r.pos.x - target.x, r.pos.z - target.z) > S.mirrorR + 25)) { this.remove(a, i, true); continue; }
       if (a.hp <= 0) {   // swatted, dug or run over: up and away, spinning, then gone in a flurry of paper
-        if (a.fly === undefined) { a.fly = 0.75; a.vy = 9; a.p.play('idle'); }
+        if (a.fly === undefined) { a.fly = 0.75; a.vy = 9; a.p.play('idle'); if (!a.netDead) g.net?.killed(a.owner || g.net.sid, a.id); }   // we got this one: tell the room
         a.pos.x += a.kb.x * dt; a.pos.z += a.kb.z * dt; a.pos.y += a.vy * dt; a.vy -= 26 * dt;
         a.p.root.position.copy(a.pos); a.p.root.rotation.x += dt * 13; a.p.root.visible = true;
         if ((a.fly -= dt) <= 0) this.remove(a, i);
         continue;
       }
-      const dx = target.x - a.pos.x, dz = target.z - a.pos.z, dist = Math.hypot(dx, dz);
-      if (runR && dist < runR && pl.dead <= 0) { g.hud.pop('SPLAT', a.pos.x, a.pos.y + 2.2, a.pos.z, 'loud'); g.bus.emit('splat', { agent: a, x: a.pos.x, y: a.pos.y, z: a.pos.z }); a.hp = 0; a.kb.set(dx, 0, dz).setLength(-12); g.shake = Math.max(g.shake, 0.2); }
+      // ours walk at us; a mirror walks at the person it was sent after
+      const to = r ? r.pos : target, down = r ? !!(r.flags & 4) : pl.dead > 0;
+      const dx = to.x - a.pos.x, dz = to.z - a.pos.z, dist = Math.hypot(dx, dz), mx = target.x - a.pos.x, mz = target.z - a.pos.z;
+      if (runR && Math.hypot(mx, mz) < runR && pl.dead <= 0) { g.hud.pop('SPLAT', a.pos.x, a.pos.y + 2.2, a.pos.z, 'loud'); g.bus.emit('splat', { agent: a, x: a.pos.x, y: a.pos.y, z: a.pos.z }); a.hp = 0; a.kb.set(mx, 0, mz).setLength(-12); g.shake = Math.max(g.shake, 0.2); }
       a.yaw = Math.atan2(dx, dz);
       a.cd -= dt;
       const ok = (x, z, step) => g.surface(x, z) - a.pos.y < 0.5 + step * 2.5;
@@ -217,8 +259,8 @@ export class Lobby {
         a.kb.multiplyScalar(Math.max(0, 1 - dt * 7));
         a.p.play('idle');
       } else if (a.throwT > 0) { a.throwT -= dt; a.p.play('swing', { speed: 2.2, fade: 0.05 });
-      } else if (pl.dead > 0 && dist < 7) { a.p.play('cheer', { speed: 1.5 });   // gloating over you while you are down
-      } else if (dist > L.stand || pl.dead > 0) {   // they walk right up to you (inside swatting distance), throwing on the way in
+      } else if (down && dist < 7) { a.p.play('cheer', { speed: 1.5 });   // gloating over you while you are down
+      } else if (dist > L.stand || down) {   // they walk right up to you (inside swatting distance), throwing on the way in
         const step = this.now.speed * dt, sx = dx / (dist || 1) * step, sz = dz / (dist || 1) * step;
         if (ok(a.pos.x + sx, a.pos.z + sz, step)) { a.pos.x += sx; a.pos.z += sz; }
         else if (ok(a.pos.x + Math.sign(sx) * step, a.pos.z, step)) a.pos.x += Math.sign(sx) * step;
@@ -226,7 +268,7 @@ export class Lobby {
         else a.pos.x += (a.pos.x < 0 ? -1 : 1) * step;   // boxed in against a wall: shuffle outward along it
         a.p.play('walk', { speed: 2.1 });
       } else a.p.play('idle');
-      if (dist < this.range && a.cd <= 0 && pl.dead <= 0) { a.cd = this.now.cooldown + Math.random(); this.throwAt(a, target, dist); }
+      if (dist < this.range && a.cd <= 0 && !down) { a.cd = this.now.cooldown + Math.random(); this.throwAt(a, to, dist, !!r); }
       a.pos.y = g.surface(a.pos.x, a.pos.z);
       a.p.root.position.copy(a.pos); a.p.root.rotation.y = a.yaw;
       a.p.root.visible = !(a.flash > 0 && (a.flash -= dt) > 0 && Math.floor(a.flash * 40) % 2);
@@ -236,13 +278,14 @@ export class Lobby {
       const s = this.shots[i];
       s.vel.y -= 6 * dt; s.sprite.position.addScaledVector(s.vel, dt); s.life -= dt;
       const p = s.sprite.position;
-      const hit = pl.dead <= 0 && Math.hypot(p.x - target.x, p.z - target.z) < hitR && Math.abs(p.y - (target.y + 1.2)) < hitR + 1;
+      const hit = !s.fake && pl.dead <= 0 && Math.hypot(p.x - target.x, p.z - target.z) < hitR && Math.abs(p.y - (target.y + 1.2)) < hitR + 1;
       if (hit) pl.hit(s.lobby);
       if (hit || s.life <= 0 || p.y < g.surface(p.x, p.z)) { g.scene.remove(s.sprite); this.shots.splice(i, 1); }
     }
   }
 
-  throwAt(a, target, dist) {
+  // fake: a mirror's throw at somebody else, for show (their own browser decides whether it hit them)
+  throwAt(a, target, dist, fake) {
     const tex = (this.tex ||= {})[a.lobby.id] ||= textTex(a.lobby.shot, a.lobby.color, '#fff', 96, 32);
     const mat = (this.mat ||= {})[a.lobby.id] ||= new THREE.SpriteMaterial({ map: tex });
     const sprite = new THREE.Sprite(mat);
@@ -252,7 +295,7 @@ export class Lobby {
     const vel = new THREE.Vector3((target.x - a.pos.x) / t, (target.y + 1.2 - sprite.position.y) / t + 3 * t, (target.z - a.pos.z) / t);
     this.game.scene.add(sprite);
     a.throwT = 0.45;
-    this.shots.push({ sprite, vel, lobby: a.lobby, life: 4 });
+    this.shots.push({ sprite, vel, lobby: a.lobby, life: 4, fake });
     this.game.bus.emit('shot', { agent: a, lobby: a.lobby, x: a.pos.x, y: a.pos.y + 1.7, z: a.pos.z });
   }
 

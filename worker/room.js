@@ -26,6 +26,7 @@ export class Room extends DurableObject {
     this.since = 0; this.epoch = null; this.ops = []; this.hits = []; this.busy = false;
     this.mounds = null; this.pace = null; this.online = 0; this.timer = null; this.ticks = 0;
     this.perIp = N.perIp; this.fl = null; this.bornAt = Date.now(); this.foldAt = 0;
+    this.ls = []; this.lk = [];                 // the shared swarm, passed round with the next positions: [sid, id, mound, suit] and [owner, id, by]
     this.calls = 0; this.callers = new Map();   // phone calls to pass on to the World; code -> { at, n } for the hourly limit
     // If we were restarted with sockets still attached, pick the players back up from what was pinned to each socket.
     for (const ws of ctx.getWebSockets()) {
@@ -164,6 +165,15 @@ export class Room extends DurableObject {
       const ok = now - p.joined > 20000 || p.dug > 0 ? Math.min(m.c, 6 - log.n) : 0;
       if (ok > 0) { log.n += ok; this.calls += ok; real = true; }
     }
+    // The shared swarm (see src/lobby.js): a lobbyist this player's browser sent after them, from a mound that is open,
+    // and lobbyists they swatted. Nothing is scored on these; they only let everyone nearby see and fight the same ones.
+    const isInt = (v, lo, hi) => Number.isInteger(v) && v >= lo && v <= hi;
+    if (Array.isArray(m.s) && this.ls.length < 600) {
+      for (const s of m.s.slice(0, 6)) if (Array.isArray(s) && isInt(s[0], 1, 65535) && isInt(s[1], 0, MOUNDS.length - 1) && isInt(s[2], 0, CFG.suits.length - 1) && this.mounds?.[s[1]] > 0) this.ls.push([p.sid, s[0], s[1], s[2]]);
+    }
+    if (Array.isArray(m.k) && this.lk.length < 1200) {
+      for (const k of m.k.slice(0, 12)) if (Array.isArray(k) && isInt(k[0], 1, 1e9) && isInt(k[1], 1, 65535)) { this.lk.push([k[0], k[1], p.sid]); real = true; }
+    }
     if (real) p.lastMsg = now;   // only real play keeps a seat; junk does not hold a room awake
   }
 
@@ -195,7 +205,13 @@ export class Room extends DurableObject {
       const unsaved = p.dug - p.saved;
       if (unsaved > 0 && (now - p.savedAt > N.saveEverySec * 1000 || (unsaved > Math.max(6, 0.2 * p.saved) && now - p.savedAt > 10000))) this.persist(ws, p);
     }
-    if (ps.length) this.cast(JSON.stringify({ t: 'p', ps }));
+    // ps is always there: older browsers still open read it without checking
+    if (ps.length || this.ls.length || this.lk.length) {
+      const msg = { t: 'p', ps };
+      if (this.ls.length) msg.ls = this.ls.splice(0);
+      if (this.lk.length) msg.lk = this.lk.splice(0);
+      this.cast(JSON.stringify(msg));
+    }
     if (this.ticks % 1200 === 0) for (const [code, log] of this.callers) if (now - log.at > 3600000) this.callers.delete(code);
     if (this.ticks % Math.max(1, Math.round(N.syncMs / N.sendMs)) === 0 && !this.busy && this.players.size) this.syncWorld(false);
   }

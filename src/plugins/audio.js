@@ -549,6 +549,7 @@ export function init(game) {
   on('shot', (e) => play('shot', e));
   on('whack', (e) => play('bonk', e));
   on('splat', (e) => play('splat', e));
+  on('remoteWhack', (e) => { if (e.near) play('bonk', e); });   // someone else swatting one of the shared swarm
   on('agentSpawn', (e) => play('lobbyist', at(e.agent.pos, { ref: 60 })));
   on('agentDown', (e) => play('paper', e));
   on('moundOpen', (e) => { if (!e.quiet) play('klaxon'); });
