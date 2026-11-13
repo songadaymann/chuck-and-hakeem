@@ -415,8 +415,9 @@ export function init(game) {
     if (tune.bad || !a.hasAttribute('src')) { tune.bad = false; a.src = address(SONG); } else if (a.ended) a.currentTime = 0;
     tuneFade(0);   // 'playing' brings it up
     if (E.ac.state !== 'running') E.ac.resume().catch(() => {});
-    // refused (no tap yet, as when the page starts itself): the next press asks again, from unlock
-    a.play()?.catch((e) => { if (e?.name === 'NotAllowedError') tune.retry = performance.now() + 300; });
+    // refused (no tap yet, as when the page starts itself): the next press asks again, from unlock. No waiting after a
+    // refusal: a finger going down does not count as a press for sound, its coming up does, and that is the same tap
+    a.play()?.catch(() => {});
   }
   // Start was pressed. Safari lets an element play later by itself only if a tap has played it once, so on that tap
   // it is played and paused at once; the real start comes MUSIC_START seconds on.
@@ -481,9 +482,15 @@ export function init(game) {
     }
     card.style.left = Math.round(best.x) + 'px'; card.style.top = Math.round(best.y) + 'px';
   };
-  const open = (byKey) => {
+  // One of the game's own panels is up (MENU, the end, a Terms of Service to agree to, the reps), or a text field or
+  // mann.cool's menu has the keyboard: the placard gives way, so it never lies over a button somebody has to press.
+  const PANELS = '#start:not([hidden]), #end:not([hidden]), #tos:not([hidden]), #reps:not([hidden])';
+  const busy = () => !!(game.typing?.() || document.querySelector(PANELS));
+  const open = (byKey, finger) => {
+    if (busy()) return;
     card.hidden = false; btn.setAttribute('aria-expanded', 'true');
-    document.exitPointerLock?.(); game.clearInput?.();   // as the game's own MENU does: the mouse comes free and nothing stays held down
+    document.exitPointerLock?.();   // as the game's own MENU does: the mouse comes free
+    if (!finger) game.clearInput?.();   // and nothing stays held down. Not for a thumb, though: the other one may be on the stick or on DIG, and stays there
     place();
     if (byKey) sw[0].focus();
   };
@@ -495,10 +502,10 @@ export function init(game) {
   paint(); btn.setAttribute('aria-expanded', 'false');
   // not a click: phones send none while the other thumb is still down on the stick. (A click with no press behind it is the keyboard.)
   const press = (el, fn) => {
-    el.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); fn(false); });
+    el.addEventListener('pointerdown', (e) => { if (e.button) return; e.preventDefault(); fn(false, e.pointerType !== 'mouse'); });
     el.addEventListener('click', (e) => { if (e.detail === 0) fn(true); else el.blur(); });
   };
-  press(btn, (byKey) => (card.hidden ? open(byKey) : close()));
+  press(btn, (byKey, finger) => (card.hidden ? open(byKey, finger) : close()));
   press(sw[0], () => apply(!muted, !music));
   press(sw[1], () => apply(muted, music));
   card.addEventListener('mousedown', (e) => e.stopPropagation());   // a right-button press here is not the start of a look around
@@ -513,6 +520,7 @@ export function init(game) {
     const i = sw.indexOf(document.activeElement), arrow = e.code === 'ArrowDown' || e.code === 'ArrowUp';
     if (i < 0 || !(arrow || e.code === 'Space' || e.code === 'Enter')) return;
     e.stopPropagation();
+    if (e.repeat && e.code === 'Enter') e.preventDefault();   // held down, Enter would flip the switch many times a second
     if (arrow) { e.preventDefault(); sw[1 - i].focus(); }
   }, true);
   addEventListener('keydown', (e) => { if (e.code === 'KeyM' && !e.repeat && !e.metaKey && !e.ctrlKey && !/INPUT|TEXTAREA|SELECT/.test(document.activeElement?.tagName) && !game.typing?.()) toggleAll(); });
@@ -577,6 +585,7 @@ export function init(game) {
   function update(dt) {
     const b = bit, up = upTier, p = game.player;
     bit = null; upTier = 0;
+    if (!card.hidden && busy()) close();
     if (!E || muted || E.ac.state !== 'running') return;
     if (up) play('toolUp', { tier: up });
     // A bite that found no dirt: it hit a nest (say so at once; the server's count comes later), or a lobbyist, or the lawn.
