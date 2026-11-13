@@ -238,7 +238,7 @@ export class Lobby {
       const a = this.agents[i], r = a.owner ? g.net?.remotes.get(a.owner) : null;
       if (a.m.hp <= 0 && a.fly === undefined) { this.remove(a, i); continue; }   // when the mound goes, so do its people
       // a mirror whose owner left, wandered off, or whose end we never heard of
-      if (a.owner && a.fly === undefined && (!r || performance.now() - a.born > S.mirrorLife * 1000 || Math.hypot(r.pos.x - target.x, r.pos.z - target.z) > S.mirrorR + 25)) { this.remove(a, i, true); continue; }
+      if (a.owner && a.fly === undefined && a.hp > 0 && (!r || performance.now() - a.born > S.mirrorLife * 1000 || Math.hypot(r.pos.x - target.x, r.pos.z - target.z) > S.mirrorR + 25)) { this.remove(a, i, true); continue; }
       if (a.hp <= 0) {   // swatted, dug or run over: up and away, spinning, then gone in a flurry of paper
         if (a.fly === undefined) { a.fly = 0.75; a.vy = 9; a.p.play('idle'); if (!a.netDead) g.net?.killed(a.owner || g.net.sid, a.id); }   // we got this one: tell the room
         a.pos.x += a.kb.x * dt; a.pos.z += a.kb.z * dt; a.pos.y += a.vy * dt; a.vy -= 26 * dt;

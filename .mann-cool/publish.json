@@ -13,6 +13,26 @@
       "display": "integer",
       "aggregation": "player-best",
       "minimumMatches": 1
+    },
+    {
+      "variant": "lobbyists",
+      "label": "Lobbyists stopped",
+      "metric": "lobbyists",
+      "metricLabel": "Lobbyists stopped",
+      "direction": "desc",
+      "display": "integer",
+      "aggregation": "player-best",
+      "minimumMatches": 1
+    },
+    {
+      "variant": "nests",
+      "label": "Nests flattened",
+      "metric": "nests",
+      "metricLabel": "Lobby nests flattened",
+      "direction": "desc",
+      "display": "integer",
+      "aggregation": "player-best",
+      "minimumMatches": 1
     }
   ],
   "shellTheme": {

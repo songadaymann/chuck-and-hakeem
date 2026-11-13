@@ -1,5 +1,5 @@
 import { DurableObject } from 'cloudflare:workers';
-import { CFG, tierFor, validName, randomName, moundSpots, CODE_ALPHABET, validCode } from '../shared/config.js';
+import { CFG, tierFor, starsFor, validName, randomName, moundSpots, CODE_ALPHABET, validCode } from '../shared/config.js';
 import { DirtGrid } from '../shared/grid.js';
 import { worldName, shardName } from './era.js';
 
@@ -7,6 +7,8 @@ const N = CFG.net;
 const MOUNDS = moundSpots();
 const newCode = () => Array.from(crypto.getRandomValues(new Uint8Array(12)), (b) => CODE_ALPHABET[b % CODE_ALPHABET.length]).join('');
 const num = (v, lo, hi) => (typeof v === 'number' && Number.isFinite(v) ? Math.max(lo, Math.min(hi, v)) : null);
+// anything of this player's not yet written down: dirt, or one of the other counts (lobbyists, nests, saves)
+const unsaved = (p) => p.dug > p.saved || p.st.some((v, i) => v > p.stSaved[i]);
 const refuse = (code, why) => { const [c, s] = Object.values(new WebSocketPair()); s.accept(); s.close(code, why); return new Response(null, { status: 101, webSocket: c }); };
 
 // Up to ~80 players who can see each other. It relays their positions twice a second and passes their digs on
@@ -35,6 +37,7 @@ export class Room extends DurableObject {
       this.name = a.room;
       const p = this.makePlayer(a.sid, a.code, a.name, a.char, a.dug, a.ip);
       if (typeof a.x === 'number') { p.x = a.x; p.z = a.z; }
+      if (Array.isArray(a.st)) { p.st = a.st.slice(0, 3); p.stSaved = p.st.slice(); }
       this.players.set(ws, p);
       this.nextSid = Math.max(this.nextSid, a.sid + 1);
     }
@@ -44,7 +47,9 @@ export class Room extends DurableObject {
   makePlayer(sid, code, name, char, dug, ip) {
     const now = Date.now();
     return { sid, code, name, char, ip, dug, saved: dug, tier: tierFor(dug), x: CFG.spawn.x, z: CFG.spawn.z, yaw: 3.14, flags: 0, moved: true,
-      budget: 0, joined: now, last: now, lastMsg: now, msgs: 0, savedAt: now, left: false };
+      budget: 0, joined: now, last: now, lastMsg: now, msgs: 0, savedAt: now, left: false,
+      // the other counts (CFG.badges): [kills, nests, saves], what of them is saved, the kill allowance, mounds they hit lately
+      st: [0, 0, 0], stSaved: [0, 0, 0], stNew: false, kb: CFG.stats.killBank, kbAt: now, hit: new Map(), stars: starsFor(dug) };
   }
 
   worldStub() { return this.env.WORLD.get(this.env.WORLD.idFromName(worldName)); }
@@ -80,34 +85,43 @@ export class Room extends DurableObject {
     // upgrade's worth, so there is nothing to cheat for. It is left unsaved here, so the next save writes it.
     if (carry) { p.budget = carry.budget; p.last = carry.last; }   // a takeover inherits the old seat's swing allowance; a fresh connection earns its own from zero
     if (!known && !carry) { p.dug = num(Number(url.searchParams.get('warm')), 0, CFG.tools[1].need) || 0; p.tier = tierFor(p.dug); }
+    // the other counts: whatever is stored, or what the seat we took over had (its unsaved part is written as it is dropped)
+    p.st = ['kills', 'nests', 'saves'].map((k, i) => Math.max(known?.[k] || 0, carry?.st[i] || 0)); p.stSaved = p.st.slice(); p.stars = starsFor(p.dug);
     this.players.set(server, p);
     this.pin(server, p);
     if (known && (name !== known.name || char !== known.char)) this.ctx.waitUntil(this.shard(code).add(code, 0, char, name));
-    server.send(JSON.stringify({ t: 'hi', sid: p.sid, code, known: !!known, dug: p.dug, name, char, room: this.name, online: Math.max(this.online, this.players.size),
-      mounds: this.mounds, ...(this.pace || {}), players: [...this.players.values()].filter((q) => q !== p).map((q) => [q.sid, q.name, q.char, q.tier, q.x, q.z, q.yaw, q.flags]) }));
+    server.send(JSON.stringify({ t: 'hi', sid: p.sid, code, known: !!known, dug: p.dug, stats: p.st, name, char, room: this.name, online: Math.max(this.online, this.players.size),
+      mounds: this.mounds, ...(this.pace || {}), players: [...this.players.values()].filter((q) => q !== p).map((q) => [q.sid, q.name, q.char, q.tier, q.x, q.z, q.yaw, q.flags, q.stars]) }));
     this.cm.forEach((cm, i) => { const f = new Uint16Array(cm.length + 2); f[0] = 1; f[1] = i; f.set(cm, 2); server.send(f.buffer); });
-    this.cast(JSON.stringify({ t: 'j', p: [p.sid, p.name, p.char, p.tier, p.x, p.z, p.yaw, p.flags] }), server);
+    this.cast(JSON.stringify({ t: 'j', p: [p.sid, p.name, p.char, p.tier, p.x, p.z, p.yaw, p.flags, p.stars] }), server);
     this.start();
     return new Response(null, { status: 101, webSocket: client });
   }
 
-  pin(ws, p) { try { ws.serializeAttachment({ room: this.name, sid: p.sid, code: p.code, name: p.name, char: p.char, dug: p.saved, ip: p.ip, x: p.x, z: p.z }); } catch (e) { /* closed */ } }
+  pin(ws, p) { try { ws.serializeAttachment({ room: this.name, sid: p.sid, code: p.code, name: p.name, char: p.char, dug: p.saved, st: p.stSaved, ip: p.ip, x: p.x, z: p.z }); } catch (e) { /* closed */ } }
   cast(msg, except) { for (const ws of this.players.keys()) if (ws !== except) { try { ws.send(msg); } catch (e) { /* closing */ } } }
   kick(ws, code, why) { try { ws.close(code, why); } catch (e) { /* gone */ } this.drop(ws); }
 
   // Write what a player has dug since their last save. The shard adds it to the stored total and tells us the total,
   // which can be higher than ours if another connection on the same code saved in the meantime.
+  // The other counts go the same way, as what was added since the last save.
   persist(ws, p) {
-    const delta = p.dug - p.saved, sent = p.dug;
-    p.saved = sent; p.savedAt = Date.now();
-    const done = this.shard(p.code).add(p.code, delta, p.char, p.name).then((total) => {
+    const delta = p.dug - p.saved, sent = p.dug, sd = p.st.map((v, i) => v - p.stSaved[i]);
+    p.saved = sent; p.stSaved = p.st.slice(); p.savedAt = Date.now();
+    const done = this.shard(p.code).add(p.code, delta, p.char, p.name, sd).then((r) => {
+      const total = typeof r === 'number' ? r : r.dug;
+      if (r && typeof r === 'object' && !p.left) ['kills', 'nests', 'saves'].forEach((k, i) => {   // another seat on this code counted some too
+        const more = (r[k] || 0) - p.stSaved[i];
+        if (more > 0) { p.st[i] += more; p.stSaved[i] += more; p.stNew = true; }
+      });
       if (total > sent + 0.05 && !p.left) {
         const extra = total - sent;
         p.dug += extra; p.saved += extra;
         if (tierFor(p.dug) !== p.tier) { p.tier = tierFor(p.dug); p.moved = true; }
+        if (starsFor(p.dug) !== p.stars) { p.stars = starsFor(p.dug); p.moved = true; }
         if (ws) { this.pin(ws, p); try { ws.send(JSON.stringify({ t: 'c', dug: Math.round(p.dug * 10) / 10 })); } catch (e) { /* closing */ } }
       } else if (ws && !p.left) this.pin(ws, p);
-    }).catch(() => { p.saved -= delta; });   // not written: count it as unsaved again
+    }).catch(() => { p.saved -= delta; p.stSaved = p.stSaved.map((v, i) => v - sd[i]); });   // not written: count it as unsaved again
     this.ctx.waitUntil(done);
     return done;
   }
@@ -152,6 +166,7 @@ export class Room extends DurableObject {
         if (!Number.isInteger(i) || i < 0 || i >= MOUNDS.length || Math.hypot(MOUNDS[i].x - p.x, MOUNDS[i].z - p.z) > far) continue;
         p.budget -= tool.period; real = true;
         this.hits.push([i, tool.dmg]);
+        if (this.mounds?.[i] > 0) p.hit.set(i, now);   // a hand in it, for when it falls (nests)
         // battering an open mound pays the same as a full bite of dirt with that tool (the browser shows the same), so nest-hunting never costs anyone their next tool
         if (this.mounds?.[i] > 0) { p.dug += Math.PI * tool.r * tool.r * tool.depth / 2; p.credit = true; }
       }
@@ -172,7 +187,17 @@ export class Room extends DurableObject {
       for (const s of m.s.slice(0, 6)) if (Array.isArray(s) && isInt(s[0], 1, 65535) && isInt(s[1], 0, MOUNDS.length - 1) && isInt(s[2], 0, CFG.suits.length - 1) && this.mounds?.[s[1]] > 0) this.ls.push([p.sid, s[0], s[1], s[2]]);
     }
     if (Array.isArray(m.k) && this.lk.length < 1200) {
-      for (const k of m.k.slice(0, 12)) if (Array.isArray(k) && isInt(k[0], 1, 1e9) && isInt(k[1], 1, 65535)) { this.lk.push([k[0], k[1], p.sid]); real = true; }
+      // each one is a lobbyist this player stopped: counted (CFG.badges), at most killRate a second, and a save when it was after someone else here
+      const S = CFG.stats;
+      p.kb = Math.min(S.killBank, p.kb + (now - p.kbAt) / 1000 * S.killRate); p.kbAt = now;
+      let sids = null;
+      for (const k of m.k.slice(0, 12)) {
+        if (!Array.isArray(k) || !isInt(k[0], 1, 1e9) || !isInt(k[1], 1, 65535)) continue;
+        this.lk.push([k[0], k[1], p.sid]); real = true;
+        if (p.kb < 1) continue;
+        p.kb--; p.st[0]++; p.stNew = true;
+        if (k[0] !== p.sid && (sids ||= new Set([...this.players.values()].map((q) => q.sid))).has(k[0])) p.st[2]++;
+      }
     }
     if (real) p.lastMsg = now;   // only real play keeps a seat; junk does not hold a room awake
   }
@@ -185,7 +210,7 @@ export class Room extends DurableObject {
     if (!p) return;
     this.players.delete(ws);
     this.cast(JSON.stringify({ t: 'l', sid: p.sid }));
-    if (p.dug > p.saved) this.persist(null, p);
+    if (unsaved(p)) this.persist(null, p);
     p.left = true;
     if (!this.players.size) { this.stop(); this.ctx.waitUntil(this.syncWorld(true)); }
   }
@@ -199,11 +224,13 @@ export class Room extends DurableObject {
     const ps = [];
     for (const [ws, p] of this.players) {
       p.msgs = 0;
-      if (p.moved) { p.moved = false; ps.push([p.sid, p.x, p.z, p.yaw, p.flags, p.tier]); }
+      if (p.moved) { p.moved = false; ps.push([p.sid, p.x, p.z, p.yaw, p.flags, p.tier, p.stars]); }
+      if (p.stNew) { p.stNew = false; try { ws.send(JSON.stringify({ t: 's', stats: p.st })); } catch (e) { /* closing */ } }
       if (now - p.lastMsg > N.idleKickSec * 1000) { this.kick(ws, 4000, 'idle'); continue; }
       // save every minute (N.saveEverySec), or sooner once a fifth more has been dug than is safely stored
       const unsaved = p.dug - p.saved;
-      if (unsaved > 0 && (now - p.savedAt > N.saveEverySec * 1000 || (unsaved > Math.max(6, 0.2 * p.saved) && now - p.savedAt > 10000))) this.persist(ws, p);
+      const stUnsaved = p.st.some((v, i) => v > p.stSaved[i]);
+      if ((unsaved > 0 || stUnsaved) && (now - p.savedAt > N.saveEverySec * 1000 || (unsaved > Math.max(6, 0.2 * p.saved) && now - p.savedAt > 10000))) this.persist(ws, p);
     }
     // ps is always there: older browsers still open read it without checking
     if (ps.length || this.ls.length || this.lk.length) {
@@ -223,6 +250,7 @@ export class Room extends DurableObject {
     this.calls = 0;
     let sent = false;
     try {
+      const now0 = Date.now();
       let res = await this.world.sync(this.name, count, this.since, list.map((o) => [o[0], o[1], o[2], o[3], o[5]]), hits, calls);
       sent = true;
       const gone = new Set();
@@ -247,7 +275,8 @@ export class Room extends DurableObject {
         if (!p.credit) continue;
         p.credit = false;
         const t = tierFor(p.dug);
-        if (t !== p.tier) { p.tier = t; p.moved = true; this.persist(ws, p); }   // a new tool is the one thing nobody should lose, and the room hears of it at once
+        if (t !== p.tier) { p.tier = t; p.moved = true; this.persist(ws, p); }
+        if (starsFor(p.dug) !== p.stars) { p.stars = starsFor(p.dug); p.moved = true; this.persist(ws, p); }   // a new paint job, likewise   // a new tool is the one thing nobody should lose, and the room hears of it at once
         try { ws.send(JSON.stringify({ t: 'c', dug: Math.round(p.dug * 10) / 10 })); } catch (e) { /* closing */ }
       }
       res.cells.forEach((pairs, i) => {
@@ -267,10 +296,15 @@ export class Room extends DurableObject {
       // tot / dg / calls: the numbers that grow with the crowd (everything ever dug, people on each pile, calls to Congress)
       const pace = { rate: res.rate, q: res.q, au: res.au, pm: res.pm, dn: res.dn, st: res.st, dl: res.dl, notice: res.notice, tot: res.tot, dg: res.dg, calls: res.calls,
         gen: res.gen, bombs: res.bombs, bomb: res.bomb }, key = JSON.stringify([res.mounds, res.online, pace]);
+      // a mound that fell since last time: a nest for everyone here who had a hand in it lately
+      if (Array.isArray(this.mounds) && Array.isArray(res.mounds)) res.mounds.forEach((h, i) => {
+        if (!(this.mounds[i] > 0) || h > 0) return;
+        for (const q of this.players.values()) { const at = q.hit.get(i); if (at && now0 - at < CFG.stats.nestWindowSec * 1000) { q.st[1]++; q.stNew = true; } q.hit.delete(i); }
+      });
       if (key !== this.worldKey) { this.worldKey = key; this.mounds = res.mounds; this.online = res.online; this.pace = pace; this.cast(JSON.stringify({ t: 'w', mounds: res.mounds, online: res.online, ...pace })); }
       if (res.perIp > 0) this.perIp = res.perIp;
       // the "save everyone now" lever on the switch, pulled before a deploy
-      if (this.fl !== null && res.fl > this.fl) for (const [ws, p] of this.players) if (p.dug > p.saved) this.persist(ws, p);
+      if (this.fl !== null && res.fl > this.fl) for (const [ws, p] of this.players) if (unsaved(p)) this.persist(ws, p);
       this.fl = res.fl;
       // The World says fuller rooms have space for all of us: close up, and everyone's browser redials at once and lands
       // in one of them. Not while anything is unsettled (a join or leave in hand, a World or room that just started), and
@@ -279,7 +313,7 @@ export class Room extends DurableObject {
       if (res.fold && !leaving && !joining && !restarted && now - this.bornAt > 60000 && now - this.foldAt > 30000) {
         this.foldAt = now;
         // everyone's digging is written down first, so the room each of them lands in a second later reads the right total
-        await Promise.all([...this.players].filter(([, p]) => p.dug > p.saved).map(([ws, p]) => this.persist(ws, p)));
+        await Promise.all([...this.players].filter(([, p]) => unsaved(p)).map(([ws, p]) => this.persist(ws, p)));
         for (const ws of [...this.players.keys()]) this.kick(ws, 4302, 'folding into a fuller room');
       }
     } catch (e) {

@@ -1,8 +1,8 @@
 import * as THREE from 'three';
-import { CFG, tierFor, validCode } from './config.js';
+import { CFG, tierFor, starsFor, rankFor, validCode } from './config.js';
 import { Avatar } from './avatar.js';
 import { at } from './base.js';
-import { reportTotal } from './board.js';
+import { reportTotal, reportStats } from './board.js';
 
 const N = CFG.net;
 const CODE_KEY = 'dig-them-out-code';
@@ -82,6 +82,8 @@ export class Net {
       p.serverDug = Math.max(m.dug, 0);
       p.dug = same ? Math.max(p.dug, p.serverDug) : p.serverDug;
       p.tier = same ? Math.max(p.tier, tierFor(p.serverDug)) : tierFor(p.serverDug);
+      p.setStars(starsFor(p.serverDug));   // quietly: what you had already earned is not news
+      if (Array.isArray(m.stats)) { p.stats = m.stats.slice(); g.bus.emit('stats', { st: p.stats, prev: null }); }
       // a pile a dirt bomb refilled while we were away: our copy is lower than the truth, so start it over (the snapshot follows)
       if (was && Array.isArray(m.gen)) g.fields.forEach((f, i) => { if (f.gen !== undefined && f.gen !== m.gen[i]) f.reset(); });
       if (Array.isArray(m.gen)) g.fields.forEach((f, i) => { f.gen = m.gen[i]; });
@@ -91,17 +93,19 @@ export class Net {
       }
       g.world(m, true);
       {   // the server has settled which look and name this code carries
-        if (m.name) { p.name = m.name; p.avatar.setName(m.name); }
+        if (m.name) p.name = m.name;
+        p.refreshTag();
         if (m.char && m.char !== p.char) p.setCharacter(m.char);
       }
       reportTotal(m.code, p.name, p.serverDug);
+      if (p.stats) reportStats(m.code, p.name, p.stats);
       this.clearRemotes();
       for (const r of m.players) this.addRemote(r);
       g.onIdentity?.();
       g.bus.emit('online', { count: this.count, room: this.room, back: was });
     } else if (m.t === 'p') {
       const now = performance.now();
-      for (const [sid, x, z, yaw, flags, tier] of m.ps) {
+      for (const [sid, x, z, yaw, flags, tier, stars] of m.ps) {
         const r = this.remotes.get(sid);
         if (!r) continue;
         // glide from where they are drawn now to the new spot over about the time between two reports
@@ -111,7 +115,7 @@ export class Net {
         if ((flags & 4) && !(r.flags & 4)) g.bus.emit('remoteDown', { remote: r, sid, name: r.name });
         if ((flags & 128) && !(r.flags & 128)) { r.avatar?.cheer(2.5); g.bus.emit('remoteCheer', { remote: r, sid }); }
         if (((flags >> 4) & 7) !== ((r.flags >> 4) & 7)) g.bus.emit('remoteFx', { remote: r, sid, effect: FX[(flags >> 4) & 7] || '' });
-        r.flags = flags; r.tier = tier;
+        r.flags = flags; r.tier = tier; if (Number.isInteger(stars)) r.stars = stars;
       }
       // the shared swarm: [sid, id, mound, suit] sent after player sid; [owner, id, by] swatted by player by
       if (Array.isArray(m.ls)) for (const [sid, id, mi, suit] of m.ls) g.lobby.mirror(sid, id, mi, suit);
@@ -119,6 +123,7 @@ export class Net {
     } else if (m.t === 'j') { this.addRemote(m.p); g.bus.emit('join', { sid: m.p[0], name: m.p[1] }); }
     else if (m.t === 'l') { g.lobby.dropMirrors(m.sid); const r = this.remotes.get(m.sid); if (r) { r.avatar?.dispose(); this.remotes.delete(m.sid); g.bus.emit('leave', { sid: m.sid, name: r.name }); } }
     else if (m.t === 'c') { p.serverDug = m.dug; p.dug = Math.max(m.dug, Math.min(p.dug, m.dug + 80)); p.checkTier(); reportTotal(this.code, p.name, m.dug); }   // our own running count may lead the server's by a few bites, never by much
+    else if (m.t === 's' && Array.isArray(m.stats)) { const prev = p.stats; p.stats = m.stats.slice(); reportStats(this.code, p.name, p.stats); g.bus.emit('stats', { st: p.stats, prev }); }   // lobbyists stopped, nests, saves (CFG.badges)
     else if (m.t === 'w') { this.count = m.online; g.world(m, false); }
   }
 
@@ -131,9 +136,9 @@ export class Net {
     if (a[0] === 1) { f.applySnapshot(a.subarray(2)); f.shown = f.progress; } else if (a[0] === 2) { f.applyCells(a.subarray(2)); this.game.bus.emit('cells', { giant: a[1], field: f, pairs: a.subarray(2) }); }
   }
 
-  addRemote([sid, name, char, tier, x, z, yaw, flags]) {
+  addRemote([sid, name, char, tier, x, z, yaw, flags, stars]) {
     if (sid === this.sid || this.remotes.has(sid)) return;
-    this.remotes.set(sid, { sid, name, char, tier, flags, yaw, tx: x, tz: z, tyaw: yaw, fx0: x, fz0: z, u: 1, span: 0.5, at: 0, gap: 0, pos: new THREE.Vector3(x, 0, z), avatar: null });
+    this.remotes.set(sid, { sid, name, char, tier, flags, stars: stars | 0, look: '', yaw, tx: x, tz: z, tyaw: yaw, fx0: x, fz0: z, u: 1, span: 0.5, at: 0, gap: 0, pos: new THREE.Vector3(x, 0, z), avatar: null });
   }
 
   dig(x, z, k, bought) { if (this.online) { this.digs.push([+x.toFixed(2), +z.toFixed(2), +k.toFixed(2)]); if (bought) this.bought = true; } }
@@ -180,7 +185,7 @@ export class Net {
       const near = [...this.remotes.values()].sort((a, b) => a.pos.distanceToSquared(p.pos) - b.pos.distanceToSquared(p.pos));
       let fresh = 0;
       near.forEach((r, i) => {
-        if (i < shown && !r.avatar && fresh < 2) { fresh++; const a = r.avatar = new Avatar(g.scene); a.setName(r.name); a.setTier(r.tier); a.setChar(r.char); }
+        if (i < shown && !r.avatar && fresh < 2) { fresh++; const a = r.avatar = new Avatar(g.scene); a.setTier(r.tier); a.setChar(r.char); r.look = ''; }
         if (i >= shown + 6 && r.avatar) { r.avatar.dispose(); r.avatar = null; }
       });
     }
@@ -197,6 +202,7 @@ export class Net {
       const tool = CFG.tools[r.tier];
       if ((r.flags & 2) && !(r.flags & 12) && tool) { if ((r.beat = (r.beat ?? Math.random()) + dt / tool.period) >= 1) { r.beat -= 1; g.remoteBite(r, tool); } }
       if (!r.avatar) continue;
+      if (r.look !== r.tier + ':' + r.stars) { r.look = r.tier + ':' + r.stars; r.avatar.setName(r.name, rankFor(r.tier, r.stars)); r.avatar.setPaint(r.stars); }   // their rank and paint job
       const fxi = (r.flags >> 4) & 7;
       r.avatar.setVisible(!(r.flags & 4));
       r.avatar.setTier(Math.max(0, r.tier - (fxi === 5 ? 1 : 0)));   // bought out: one tool down, like the owner sees

@@ -1,5 +1,5 @@
 import * as THREE from 'three';
-import { CFG } from './config.js';
+import { CFG, starsFor, rankFor } from './config.js';
 import { Avatar } from './avatar.js';
 import { worldH } from '../shared/terrain.js';
 
@@ -42,6 +42,7 @@ export class Player {
     this.deductible = 0; this.sinceHit = 99; this.dead = 0; this.safe = 0; this.tosFree = 0; this.camDist = CFG.tools[0].cam;
     this.digging = false; this.fighting = false; this.phase = 0; this.moving = false;
     this.char = null; this.name = '';
+    this.stars = 0; this.stats = null;   // stars past the top machine (CFG.paints); [kills, nests, saves] as the server last said
   }
 
   get body() { return this.avatar.body; }
@@ -57,8 +58,19 @@ export class Player {
   }
   checkTier() {
     const next = CFG.tools[this.tier + 1], basis = this.game.net?.online ? this.serverDug : this.dug;
-    if (next && basis >= next.need) { this.tier++; this.game.hud.toast(`NEW TOOL\n${next.name.toUpperCase()}`, 3); this.game.bus?.emit('toolUp', { tier: this.tier, tool: next, quiet: !this.game.started }); this.checkTier(); }
+    if (next && basis >= next.need) { this.tier++; this.refreshTag(); this.game.hud.toast(`NEW TOOL: ${next.name.toUpperCase()}\nRANK: ${CFG.ranks[this.tier].toUpperCase()}`, 3.5); this.game.bus?.emit('toolUp', { tier: this.tier, tool: next, quiet: !this.game.started }); this.checkTier(); return; }
+    // past the top machine: a star and a new paint job at each of CFG.paints
+    const s = starsFor(basis);
+    if (s > this.stars) {
+      const job = CFG.paints[s - 1];
+      this.setStars(s);
+      if (this.game.started) { this.game.hud.toast(`NEW PAINT JOB: ${job.name.toUpperCase()}\n${'\u2605'.repeat(s)} FOR YOUR BUCKET-WHEEL`, 5, 3); this.avatar.cheer(2.5); }
+      this.game.bus?.emit('paintUp', { stars: s, paint: job, quiet: !this.game.started });
+    }
   }
+  setStars(s) { this.stars = s; this.avatar.setPaint(s); this.refreshTag(); }
+  // the name tag over you: your name, and your rank under it
+  refreshTag() { this.avatar.setName(this.name, rankFor(this.tier, this.stars)); }
 
   hit(lobby) {
     if (this.dead > 0 || this.safe > 0) return;

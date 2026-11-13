@@ -390,7 +390,7 @@ const plugins = await loadPlugins(game);
 if (game.solo && saved?.dug) { player.dug = saved.dug; player.checkTier(); hud.toast('', 0); }
 { let t = player.toolIndex; while (CFG.tools[t].kind !== 'hand') t--; player.avatar.setTier(t); }   // the start screen shows you on foot, tool in hand
 player.camPitch = 0.1;
-const setName = (n) => { player.name = n; $('name').textContent = n; player.avatar.setName(n); };
+const setName = (n) => { player.name = n; $('name').textContent = n; player.refreshTag(); };
 const pick = async (i) => { who = (i + roster.length) % roster.length; $('who').textContent = `${who + 1} of ${roster.length}`; await player.setCharacter(roster[who]); };
 setName(validName(saved?.name) ? saved.name : randomName());
 await pick(who);
