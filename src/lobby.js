@@ -1,10 +1,11 @@
 import * as THREE from 'three';
-import { CFG, moundSpots, wavesWanted, lobbyHeat, lobbyAt } from './config.js';
+import { CFG, moundSpots, wavesWanted, lobbyHeat, lobbyAt, lobbyStep, hivesOpen, crowdShare } from './config.js';
 import { ps1ify, textTex } from './ps1.js';
 import { person, model, attach } from './assets.js';
 import { worldH } from './world.js';
 
 const L = CFG.lobby;
+const TOUCH = matchMedia('(pointer: coarse)').matches;
 const BEAM = new THREE.BoxGeometry(1.6, 150, 1.6);
 const BONK = ['BONK', 'THWACK', 'NO COMMENT', 'DECLINED', 'POW', 'I WILL CIRCLE BACK', 'PER MY LAST EMAIL', 'BILLABLE!'];
 // What each lobby's people say as they walk out of the mound. Parody one-liners, nobody's real words.
@@ -21,13 +22,15 @@ const glowMat = {};
 
 // Lobby mounds are dotted around the grounds but stay shut until the dig alarms them. An open mound keeps sending
 // lobbyists at you until it is flattened. Mound health is shared; the lobbyists themselves are yours alone.
-// They come thicker, faster and throw more often the lower the piles are and the more people are digging (heat).
+// They come thicker and faster the lower the pile nearest you is and the more people are digging (CFG.lobby.steps),
+// and thicker still, throwing from further off, the bigger your machine; they walk faster and throw more often with heat.
 export class Lobby {
   constructor(game) {
     this.game = game;
     this.mounds = []; this.agents = []; this.shots = [];
     this.spawning = 0; this.waves = 0; this.waveT = 0;
     this.heat = 0; this.heatT = 1; this.now = lobbyAt(0);   // now = the lobby numbers at the current heat
+    this.hives = L.steps[0][1]; this.per = L.steps[0][2]; this.perMound = this.per; this.every = L.steps[0][3]; this.range = L.range;
   }
 
   async build(saved) {
@@ -148,7 +151,7 @@ export class Lobby {
     if (want - this.waves > 3) this.waves = want - 3;
     // ...and the lobbies never stay away for long: with nothing open for quietSec, the next one opens anyway (the server does the same)
     if (this.moundsLeft) this.quietT = 0; else if ((this.quietT = (this.quietT || 0) + 0.5) > L.quietSec && want <= this.waves) want = this.waves + 1;
-    while (this.waves < want && this.moundsLeft < this.now.maxOpen) {
+    while (this.waves < want && this.moundsLeft < this.hives) {
       let i = this.waves % n, tries = 0;
       while (this.mounds[i].hp > 0 && tries++ < n) i = (i + 1) % n;
       this.set(this.mounds[i], L.moundHp, false); this.waves++; this.quietT = 0;
@@ -169,6 +172,15 @@ export class Lobby {
       this.heatT = 0;
       const diggers = !g.solo && g.net?.online ? g.dg.reduce((s, n) => s + (n || 0), 0) : 1;
       this.now = lobbyAt(this.heat = lobbyHeat(this.progress(), diggers));
+      // how thick they come around you: the pile you are nearest, your machine, the crowd, your device
+      const near = g.fields.reduce((b, f) => (!b || Math.hypot(target.x - f.giant.x, target.z - f.giant.z) < Math.hypot(target.x - b.giant.x, target.z - b.giant.z) ? f : b), null);
+      const step = lobbyStep(near ? near.progress / CFG.dirt.doneAt : 0), T = L.tools, t = Math.min(pl.toolIndex | 0, T.n.length - 1);
+      const open = Math.max(1, this.moundsLeft);
+      this.per = Math.max(1, Math.round(Math.min(L.most, step.per * T.n[t]) * (TOUCH ? L.touch : 1)));
+      this.perMound = Math.ceil(this.per / open);
+      this.every = step.every / T.n[t] / (1 + L.crowdFast * crowdShare(diggers));
+      this.range = L.range * T.range[t];
+      this.hives = hivesOpen(Math.max(...g.fields.map((f) => Math.min(1, f.progress / CFG.dirt.doneAt))), g.net?.count || 1);
     }
     if ((g.solo || !g.net?.everOnline) && (this.waveT += dt) > 0.5) { this.waveT = 0; this.practiceWaves(); }
     for (const m of this.mounds) {
@@ -180,7 +192,7 @@ export class Lobby {
       }
       if (m.hp <= 0) continue;
       m.timer -= dt;
-      if (m.timer <= 0) { m.timer = this.now.spawnEvery; if (m.alive < this.now.maxPerMound) this.spawn(m); }
+      if (m.timer <= 0) { m.timer = this.every; if (m.alive < this.perMound && this.agents.length < this.per) this.spawn(m); }
     }
     // a machine on the move flattens anyone it touches
     const runR = pl.inVehicle && pl.vel.length() > 1.5 ? Math.min(6, 1.6 + pl.toolCfg.r * 0.35) : 0;
@@ -214,7 +226,7 @@ export class Lobby {
         else a.pos.x += (a.pos.x < 0 ? -1 : 1) * step;   // boxed in against a wall: shuffle outward along it
         a.p.play('walk', { speed: 2.1 });
       } else a.p.play('idle');
-      if (dist < L.range && a.cd <= 0 && pl.dead <= 0) { a.cd = this.now.cooldown + Math.random(); this.throwAt(a, target, dist); }
+      if (dist < this.range && a.cd <= 0 && pl.dead <= 0) { a.cd = this.now.cooldown + Math.random(); this.throwAt(a, target, dist); }
       a.pos.y = g.surface(a.pos.x, a.pos.z);
       a.p.root.position.copy(a.pos); a.p.root.rotation.y = a.yaw;
       a.p.root.visible = !(a.flash > 0 && (a.flash -= dt) > 0 && Math.floor(a.flash * 40) % 2);
