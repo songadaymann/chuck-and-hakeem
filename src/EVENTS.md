@@ -36,6 +36,7 @@ not throw. Positions are world metres (+Y up). The Capitol's west front faces +Z
 | `remoteTool` | `remote, sid, name, tier, tool` | another player in your room earned a tool |
 | `remoteDown` | `remote, sid, name` | another player was knocked out by lobbyists |
 | `remoteCheer` | `remote, sid` | another player cheered |
+| `remoteWhack` | `agent, sid, name, mine, near, x, y, z` | another player swatted a lobbyist of the shared swarm (`mine`: one that was after you; `near`: within 45 m of you) |
 | `remoteFx` | `remote, sid, effect` | another player came under (or out of: `effect` is `''`) a lobby effect |
 | `called` | `chamber, party, state` | you logged a phone call to a member of Congress (emitted by the reps add-on; the core sends it to the server) |
 | `honk` | `x, y, z, kind` | a vehicle in the street honked or rang at you (emitted by the traffic scenery) |
@@ -48,7 +49,7 @@ not throw. Positions are world metres (+Y up). The Capitol's west front faces +Z
 
 `game.player` (`pos`, `yaw`, `camYaw`, `vel`, `tier`, `toolIndex`, `toolCfg`, `digging`, `fighting`, `moving`, `inVehicle`, `hp`, `fx`, `deductible`, `dead`, `safe`, `dug`, `name`, `avatar`),
 `game.fields[i]` (`progress`, `giant`, `heightAt(x, z)`, `floorAt(x, z)`, `inside(x, z)`), `game.giants[i]` (`root`, `head`, `cfg`, `sign`, `was`),
-`game.lobby` (`mounds`, `agents`, `moundsLeft`), `game.net` (`online`, `everOnline`, `full`, `count`, `remotes`: Map of `{ sid, name, char, tier, flags, pos, yaw, avatar }`),
+`game.lobby` (`mounds`, `agents` (an agent with `owner` set is a mirror of one sent after that player), `moundsLeft`, `company`: people beside you), `game.net` (`online`, `everOnline`, `full`, `count`, `remotes`: Map of `{ sid, name, char, tier, flags, pos, yaw, avatar }`),
 `game.surface(x, z)`, `game.status(i)` (`buried` / `dug` / `lost`), `game.supercharged(i)`, `game.clock(i)`, `game.deadlines[i]`, `game.time` (seconds of game time), `game.started`, `game.over`, `game.solo`,
 `game.tot` (cubic metres everyone has dug, ever), `game.dg[i]` (people digging each pile right now), `game.calls` (calls to Congress logged by all players),
 `game.bomb` (the dirt bomb in progress or null), `game.bombs` (how many have been dropped), `game.storming()` (true while one is on: nobody digs),

@@ -19,6 +19,7 @@ export class Net {
     this.ws = null; this.online = false; this.everOnline = false; this.full = false; this.asleep = false;
     this.sid = 0; this.count = 0; this.room = '';
     this.digs = []; this.hits = []; this.calls = 0;
+    this.ls = []; this.lk = [];   // lobbyists we sent after ourselves, and ones we swatted, for the room (see Lobby)
     this.remotes = new Map();
     this.lastPos = ''; this.sendAcc = 0; this.pickAcc = 0; this.retryIn = 0; this.backoff = 2; this.waitT = 0; this.offT = 0;
     this.code = null; this.pendingCode = null; this.replaced = false; this.notice = ''; this.chose = false; this.bought = false;
@@ -64,7 +65,7 @@ export class Net {
   redial() { this.hangUp(); this.replaced = false; this.retryIn = 0; this.backoff = 2; this.connect(); }
   wake() { if (this.asleep) { this.asleep = false; this.retryIn = 0; this.backoff = 2; } }
 
-  clearRemotes() { for (const r of this.remotes.values()) r.avatar?.dispose(); this.remotes.clear(); }
+  clearRemotes() { for (const r of this.remotes.values()) r.avatar?.dispose(); this.remotes.clear(); this.game.lobby?.dropMirrors(); }
 
   onJson(m) {
     const g = this.game, p = g.player;
@@ -112,8 +113,11 @@ export class Net {
         if (((flags >> 4) & 7) !== ((r.flags >> 4) & 7)) g.bus.emit('remoteFx', { remote: r, sid, effect: FX[(flags >> 4) & 7] || '' });
         r.flags = flags; r.tier = tier;
       }
+      // the shared swarm: [sid, id, mound, suit] sent after player sid; [owner, id, by] swatted by player by
+      if (Array.isArray(m.ls)) for (const [sid, id, mi, suit] of m.ls) g.lobby.mirror(sid, id, mi, suit);
+      if (Array.isArray(m.lk)) for (const [owner, id, by] of m.lk) g.lobby.netKill(owner, id, by);
     } else if (m.t === 'j') { this.addRemote(m.p); g.bus.emit('join', { sid: m.p[0], name: m.p[1] }); }
-    else if (m.t === 'l') { const r = this.remotes.get(m.sid); if (r) { r.avatar?.dispose(); this.remotes.delete(m.sid); g.bus.emit('leave', { sid: m.sid, name: r.name }); } }
+    else if (m.t === 'l') { g.lobby.dropMirrors(m.sid); const r = this.remotes.get(m.sid); if (r) { r.avatar?.dispose(); this.remotes.delete(m.sid); g.bus.emit('leave', { sid: m.sid, name: r.name }); } }
     else if (m.t === 'c') { p.serverDug = m.dug; p.dug = Math.max(m.dug, Math.min(p.dug, m.dug + 80)); p.checkTier(); reportTotal(this.code, p.name, m.dug); }   // our own running count may lead the server's by a few bites, never by much
     else if (m.t === 'w') { this.count = m.online; g.world(m, false); }
   }
@@ -133,6 +137,8 @@ export class Net {
   }
 
   dig(x, z, k, bought) { if (this.online) { this.digs.push([+x.toFixed(2), +z.toFixed(2), +k.toFixed(2)]); if (bought) this.bought = true; } }
+  spawned(id, mound, suit) { if (this.online) { this.ls.push([id, mound, suit]); if (this.ls.length > 24) this.ls.shift(); } }
+  killed(owner, id) { if (this.online && owner) { this.lk.push([owner, id]); if (this.lk.length > 48) this.lk.shift(); } }
   hitMound(i, bought) { if (this.online) { this.hits.push(i); if (bought) this.bought = true; } }
   // Take this window's seat back after another window took it, or after dozing off.
   reclaim() { if (this.replaced) { this.replaced = false; this.notice = ''; this.retryIn = 0; this.backoff = 2; this.connect(); } }
@@ -161,8 +167,10 @@ export class Net {
       if (this.hits.length) { m.h = this.hits.splice(0, 4); }
       if (this.bought && (m.d || m.h)) m.b = 1;
       if (this.calls) { m.c = Math.min(3, this.calls); this.calls = 0; }
+      if (this.ls.length) m.s = this.ls.splice(0, 6);
+      if (this.lk.length) m.k = this.lk.splice(0, 12);
       this.bought = false;
-      if (m.p || m.d || m.h || m.c) this.ws.send(JSON.stringify(m));
+      if (m.p || m.d || m.h || m.c || m.s || m.k) this.ws.send(JSON.stringify(m));
     }
     // everyone else: only the nearest few get a full body (fewer on a phone). Bodies arrive a couple at a time, nearest
     // first, and one is kept until its owner is clearly out of range so two people swapping places do not flicker.

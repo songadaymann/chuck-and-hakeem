@@ -68,6 +68,12 @@ export const CFG = {
            // and a phone or tablet gets `touch` of everything, because each one is a whole animated person to draw.
            tools: { n: [1, 1, 1, 1, 1.25, 1.5, 1.75, 2, 2.5, 3], range: [1, 1, 1, 1, 1, 1.2, 1.2, 1.4, 1.4, 1.6] },
            most: 50, touch: 0.67,
+           // Swarms are shared: a lobbyist sent after you is drawn on the screens of the people near you, and anyone can
+           // swat it (the kill is passed round the room). So the numbers above are a crowd's worth, meant to be fought
+           // together: alone (nobody standing within `near` metres) you get `alone` of them, rising to all of them with
+           // `full` others beside you. Each screen draws at most `mirrors` of other people's (fewer on a phone), only
+           // for people within mirrorR, and forgets one after mirrorLife seconds in case its end never arrives.
+           share: { alone: 0.5, near: 35, full: 3, mirrors: 16, mirrorsTouch: 6, mirrorR: 60, mirrorLife: 120 },
            // Walking speed and time between throws still follow heat (0..1) = pile x (share of the two piles gone) + crowd x
            // (0 for a lone digger, 1 at crowdFull people, counted in doublings): the numbers above at 0, `at` at 1.
            ramp: { pile: 0.6, crowd: 0.4, crowdFull: 64, at: { speed: 4.2, cooldown: 2.8 } } },
