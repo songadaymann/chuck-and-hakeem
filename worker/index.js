@@ -1,6 +1,7 @@
 // Entry point on Cloudflare. Static files at the root are served straight from the asset store without running this
 // code; only /ws (join the shared dig), /api/* and everything under /leave come through here.
-import { worldName } from './era.js';
+import { worldName, shardName } from './era.js';
+import { CODE_ALPHABET } from '../shared/config.js';
 import SHELL_THEME from '../mann-cool-shell-theme.json';
 export { World } from './world.js';
 export { Room } from './room.js';
@@ -17,10 +18,10 @@ const MOUNT = '/leave';
 const HOME = 'https://mann.cool';
 // One leaderboard board, "Dirt moved": each player's lifetime total (src/board.js posts it; games.json declares it).
 const BOARDS = [{ variant: 'dirt', label: 'Dirt moved', metric: 'dirtM3', metricLabel: 'Cubic metres of dirt moved', direction: 'desc', display: 'integer', aggregation: 'player-best', minimumMatches: 1 }];
-const SHELL = { slug: 'leave', title: "Chuck & Hakeem Won't Leave", leaderboard: true, version: '20261109-solana-signin1' };
+const SHELL = { slug: 'leave', title: "Chuck & Hakeem Won't Leave", leaderboard: true, limit: 100, version: '20261113-boardlimit1' };
 const SHELL_PATH = '/platform/v1/game-shell.js';
 const attr = (v) => String(v).replaceAll('&', '&amp;').replaceAll('"', '&quot;').replaceAll('<', '&lt;').replaceAll('>', '&gt;');
-const SHELL_TAG = `<script src="${HOME}${SHELL_PATH}?v=${SHELL.version}" data-slug="${attr(SHELL.slug)}" data-title="${attr(SHELL.title)}" data-leaderboard="${SHELL.leaderboard ? 'true' : 'false'}" data-leaderboard-variant="${BOARDS[0].variant}" data-leaderboard-boards="${attr(JSON.stringify(BOARDS))}" data-shell-theme="${attr(JSON.stringify(SHELL_THEME))}" defer></script>`;
+const SHELL_TAG = `<script src="${HOME}${SHELL_PATH}?v=${SHELL.version}" data-slug="${attr(SHELL.slug)}" data-title="${attr(SHELL.title)}" data-leaderboard="${SHELL.leaderboard ? 'true' : 'false'}" data-leaderboard-variant="${BOARDS[0].variant}" data-leaderboard-limit="${SHELL.limit}" data-leaderboard-boards="${attr(JSON.stringify(BOARDS))}" data-shell-theme="${attr(JSON.stringify(SHELL_THEME))}" defer></script>`;
 // a short name for this exact tag, so a browser's kept copy of the page is not reused once the shell or its theme changes
 const SHELL_ID = [...SHELL_TAG].reduce((h, c) => Math.imul(h ^ c.charCodeAt(0), 16777619) >>> 0, 2166136261).toString(36);
 // The shell asks the site it is on for these. On mann.cool they are the site's own and never come here.
@@ -68,6 +69,16 @@ export default {
       if (req.method !== 'POST') return tag(new Response('no', { status: 405 }));
       let patch;
       try { patch = await req.json(); } catch (e) { return tag(new Response('bad json', { status: 400 })); }
+      // count: [from, to] counts saved players in that slice of the save shards (one per two-letter code start, so
+      // 31 x 31 of them). The admin page asks in slices so no one request makes too many calls, then sends the sum as
+      // `counted` for the World to keep.
+      if (Array.isArray(patch.count)) {
+        const all = [...CODE_ALPHABET].flatMap((a) => [...CODE_ALPHABET].map((b) => a + b));
+        const from = Math.max(0, patch.count[0] | 0), to = Math.min(all.length, from + 200, patch.count[1] | 0);
+        const got = await Promise.all(all.slice(from, to).map((p) => env.PLAYERS.get(env.PLAYERS.idFromName(shardName(p))).count().catch(() => null)));
+        const ok = got.filter(Boolean);
+        return tag(Response.json({ shards: all.length, from, to, failed: got.length - ok.length, codes: ok.reduce((s, r) => s + r.codes, 0), digging: ok.reduce((s, r) => s + r.digging, 0) }));
+      }
       statusP = null;
       return tag(Response.json(await world.control(patch)));
     }

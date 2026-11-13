@@ -59,6 +59,9 @@
   <small>A deploy restarts every room. Anything a player dug in the last minute and not yet written down would be lost.</small>
   <button id="flush" type="button">Save everyone now</button>
   <small>Press, wait about three seconds, then deploy.</small>
+  <h2>Players</h2>
+  <small>Counts every player code ever saved in this world (anyone who stayed long enough to be saved), and how many of them have dug at least 1 m3. Takes a few seconds.</small>
+  <button id="countPlayers" type="button">Count players</button>
   <h2>Dirt bomb now</h2>
   <small>Drops one at once on that pile, the biggest a bomb may be (5% of it), whatever the schedule says. For testing, or for fun.</small>
   <div id="bombBtns"></div>
@@ -112,6 +115,7 @@ function show(d, fill) {
     + `\n${d.tot.toLocaleString()} m3 dug by everyone, ever; ${d.calls.toLocaleString()} calls to Congress logged`
     + `\ndirt bombs: ${d.bombs ?? 0} dropped` + (d.bomb ? `, one landing on ${names[d.bomb.i]} (${d.bomb.lobby}) in ${Math.max(0, d.bomb.hit / 1000).toFixed(0)} s` : '') + (d.lastBomb ? `; last one ${new Date(d.lastBomb).toLocaleTimeString()}` : '')
     + (d.spend ? `\nestimated spend today (${d.spend.day}, UTC): $${d.spend.usd.toFixed(2)} of $${c.perDay} budget` + ['', ': OVER BUDGET, nobody new is seated', ': FAR OVER BUDGET, shared dig closed until the day turns over'][d.spend.limited] : '')
+    + (d.counted ? `\nplayers ever: ${d.counted.codes.toLocaleString()} codes, ${d.counted.digging.toLocaleString()} of them dug 1 m3 or more (counted ${new Date(d.counted.at).toLocaleString()})` : '')
     + (d.flushedAt ? `\nlast "save everyone now": ${new Date(d.flushedAt).toLocaleTimeString()}` : '');
 }
 $('load').onclick = async () => show(await call(), true);
@@ -132,6 +136,20 @@ $('form').onsubmit = async (e) => {
   if (!Object.keys(body).length) { $('msg').textContent = 'nothing changed'; return; }
   show(await call(body), true);
   if (!$('msg').textContent) $('msg').textContent = 'saved';
+};
+$('countPlayers').onclick = async () => {
+  const b = $('countPlayers'); b.disabled = true;
+  let codes = 0, digging = 0, failed = 0, from = 0, shards = 1;
+  try {
+    while (from < shards) {
+      $('msg').textContent = `counting... ${from} of ${shards > 1 ? shards : '?'} save shards`;
+      const r = await call({ count: [from, from + 100] });
+      if (!r || typeof r.codes !== 'number') { $('msg').textContent = 'count failed'; return; }
+      codes += r.codes; digging += r.digging; failed += r.failed; shards = r.shards; from = r.to;
+    }
+    show(await call({ counted: { codes, digging } }), false);
+    $('msg').textContent = `${codes.toLocaleString()} players ever, ${digging.toLocaleString()} dug 1 m3 or more` + (failed ? ` (${failed} shards did not answer: the real numbers are a little higher)` : '');
+  } finally { b.disabled = false; }
 };
 $('flush').onclick = async () => {
   show(await call({ flush: true }), false);

@@ -11,6 +11,11 @@ export class Players extends DurableObject {
     const rows = this.ctx.storage.sql.exec('SELECT dug, char, name FROM p WHERE code = ?', code).toArray();
     return rows[0] || null;
   }
+  // How many codes are saved here, and how many of them have dug at least a cubic metre (for the admin page's count).
+  count() {
+    const r = this.ctx.storage.sql.exec('SELECT COUNT(*) AS n, COALESCE(SUM(dug >= 1), 0) AS d FROM p').toArray()[0];
+    return { codes: r.n, digging: r.d };
+  }
   // Adds what was dug since the last save and returns the new total. Adding (rather than overwriting) means two
   // connections on one code, or a reconnect that raced a stale one, can never erase each other's digging.
   add(code, delta, char, name) {
